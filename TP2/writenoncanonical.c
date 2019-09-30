@@ -8,6 +8,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include "flags.h"
+#include "structs.h"
+#include "protocolo.h"
 
 #define BAUDRATE B38400
 #define MODEMDEVICE "/dev/ttyS1"
@@ -72,6 +75,11 @@ int main(int argc, char** argv)
 
     printf("New termios structure set\n");
 
+    if(llopen(fd,FLAG_LL_OPEN_TRANSMITTER)<0){
+      printf("Erro no llopen");
+      return -1;
+    }
+
     fgets(buf, 1000, stdin);
     int str_size = strlen(buf), j=0;
     buf[str_size] = '*';
@@ -81,6 +89,7 @@ int main(int argc, char** argv)
 
     res = write(fd, buf, str_size+1);
     printf("%d bytes written\n", res);
+
 
     while (STOP == FALSE) {
       res += read(fd,buf,1);
