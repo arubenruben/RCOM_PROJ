@@ -1,5 +1,0 @@
-#define FLAG 0x99
-#define A_EM 0x03
-#define A_RE 0x01
-#define C_SET 0x03
-#define C_UA 0x07
