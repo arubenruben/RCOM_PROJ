@@ -26,4 +26,3 @@ while(conta < 4){
 printf("Vou terminar.\n");
 
 }
-
