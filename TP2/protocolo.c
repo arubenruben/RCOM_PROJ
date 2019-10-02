@@ -22,7 +22,7 @@ void alarm_handler(int signo) {
 
     else {
       finish = true;
-    }    
+    }
   }
 
   return;
@@ -44,7 +44,6 @@ int sendBlock(int flag) {
   buf[FLAG_INDEX_END] = FLAG;
 
   int bytes_send = write(porta, buf, BUF_SIZE);
-  printf("Sent BLOCK\n");
 
   if(bytes_send != BUF_SIZE) {
     perror("Error writing in llopen:");
@@ -75,8 +74,6 @@ int readBlock(int flag){
       perror("Failled to read");
       return READ_FAIL;
     }
-
-    printf("Read: %x\n", buf[size]);
 
     switch (state){
       case ST_START:
@@ -235,5 +232,5 @@ int llopen(int fd, int flag) {
       return -1;
     }
   }
-  return porta;
+  return 0;
 }
