@@ -11,7 +11,7 @@
 * @param {...} porta
 * @param {...} flag
 */
-int llopen(int porta, int flag);
+int llopen(int fd, int flag);
 
 /**
 * ...description...
@@ -41,7 +41,7 @@ int llclose(int fd);
 * @param {...} buf
 * @param {...} n_bytes
 */
-int sendSet(int porta, unsigned char *buf,unsigned int n_bytes);
+int sendSet(int porta, unsigned char *buf, unsigned int n_bytes);
 
 /**
 * ...description...

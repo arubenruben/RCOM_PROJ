@@ -12,10 +12,22 @@
 
 //Flags values
 #define FLAG 0x99
-#define A_EM 0x03 
+#define A_EM 0x03
 #define A_RE 0x01
 #define C_SET 0x03
 #define C_UA 0x07
 
 //Other variables
+#define INVALID_PARAMS -1
+#define READ_SUCCESS 0
+#define READ_FAIL 1
 #define BUF_SIZE 5
+#define MAX_BUF 255
+
+//State machine flags
+#define ST_START 0
+#define ST_FLAG_RCV 1
+#define ST_A_RCV 2
+#define ST_C_RCV 3
+#define ST_BCC_OK 4
+#define ST_STOP 5

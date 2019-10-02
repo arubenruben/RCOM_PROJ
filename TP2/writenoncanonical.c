@@ -73,32 +73,15 @@ int main(int argc, char** argv)
 
     printf("New termios structure set\n");
 
+
+    sleep(20);
+
+    printf("Sai do Sleep, LL open");
+
     if(llopen(fd,FLAG_LL_OPEN_TRANSMITTER) < 0){
       printf("Error in llopen function\n");
       return -1;
     }
-
-    fgets(buf, 1000, stdin);
-    int str_size = strlen(buf), j=0;
-    buf[str_size] = '*';
-    buf[str_size + 1] = '\0';
-
-    printf("%s\n", buf);
-
-    res = write(fd, buf, str_size+1);
-    printf("%d bytes written\n", res);
-
-
-    while (STOP == FALSE) {
-      res += read(fd,buf,1);
-      buf[res]=0;
-      printf(":%s:%d\n", buf, res);
-      if (buf[res-1]=='*')
-        STOP=TRUE;
-    }
-
-    printf("%s\n", buf);
-
 
   /*
     O ciclo FOR e as instru��es seguintes devem ser alterados de modo a respeitar
