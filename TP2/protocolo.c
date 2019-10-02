@@ -9,10 +9,9 @@ static unsigned int porta = 0;
 unsigned int n_bytes = 0;
 
 void alarm_handler(int signo) {
-
-  while(!finish) {
-
+  if(signo == SIGALRM){
     if(retry_num < MAX_RETR) {
+
       if(sendBlock(FLAG_LL_OPEN_TRANSMITTER) != READ_SUCCESS) {
         return;
       }
@@ -23,9 +22,8 @@ void alarm_handler(int signo) {
 
     else {
       finish = true;
-    }
+    }    
   }
-
 
   return;
 }
