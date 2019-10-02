@@ -74,9 +74,9 @@ int main(int argc, char** argv)
     printf("New termios structure set\n");
 
 
-    sleep(20);
+    //sleep(20);
 
-    printf("Sai do Sleep, LL open");
+    //printf("Sai do Sleep, LL open");
 
     if(llopen(fd,FLAG_LL_OPEN_TRANSMITTER) < 0){
       printf("Error in llopen function\n");

@@ -31,7 +31,7 @@ void alarm_handler(int signo) {
 }
 
 int sendBlock(int flag) {
-  unsigned char buf[5];
+  unsigned char buf[BUF_SIZE];
 
   buf[FLAG_INDEX_BEGIN] = FLAG;
   if(flag == FLAG_LL_OPEN_TRANSMITTER){
@@ -46,20 +46,21 @@ int sendBlock(int flag) {
   buf[FLAG_INDEX_END] = FLAG;
 
   int bytes_send = write(porta, buf, BUF_SIZE);
+  printf("Sent BLOCK\n");
 
   if(bytes_send != BUF_SIZE) {
     perror("Error writing in llopen:");
     return -1;
   }
 
-  return bytes_send;
+  return READ_SUCCESS;
 }
 
 int readBlock(int flag){
   unsigned char buf[MAX_BUF];
   unsigned int size = 0, state = ST_START;
 
-  if(flag != FLAG_LL_OPEN_RECEIVER || flag != FLAG_LL_OPEN_TRANSMITTER)
+  if(flag != FLAG_LL_OPEN_RECEIVER && flag != FLAG_LL_OPEN_TRANSMITTER)
     return INVALID_PARAMS;
 
   for (size = 0; state != ST_STOP && size < MAX_BUF; size++){
@@ -67,12 +68,17 @@ int readBlock(int flag){
     //read byte
     if (!read(porta, &buf[size], 1)){
       if(errno == EINTR){
-        continue;
+        if(finish == true)
+          return READ_FAIL;
+
         state = ST_START;
+        continue;
       }
       perror("Failled to read");
       return READ_FAIL;
     }
+
+    printf("Read: %x\n", buf[size]);
 
     switch (state){
       case ST_START:
@@ -192,25 +198,7 @@ int readBlock(int flag){
 int llopen(int fd, int flag) {
 
   porta = fd;
-/*
-  if(flag == FLAG_LL_OPEN_TRANSMITTER) {
-    buf[C_INDEX] = C_SET;
-  }
 
-  else if(flag == FLAG_LL_OPEN_RECEIVER) {
-    buf[C_INDEX] = C_UA;
-  }
-
-  else {
-    printf("Wrong flag value\n");
-    return -1;
-  }
-
-  buf[FLAG_INDEX_BEGIN] = FLAG;
-  buf[A_INDEX] = A_EM;
-  buf[BCC_INDEX] = buf[A_INDEX] ^ buf[C_INDEX];
-  buf[FLAG_INDEX_END] = FLAG;
-*/
   //Sending SET/UA frame
   if(flag == FLAG_LL_OPEN_TRANSMITTER) {
 
@@ -219,14 +207,14 @@ int llopen(int fd, int flag) {
       return -1;
     }
 
-    if(sendBlock(FLAG_LL_OPEN_TRANSMITTER) != BUF_SIZE) {
+    if(sendBlock(FLAG_LL_OPEN_TRANSMITTER) != READ_SUCCESS) {
       printf("Error in sendSet function\n");
     }
 
     //Set alarm
     alarm(TIMEOUT);
 
-    if(readBlock(FLAG_LL_OPEN_RECEIVER) != BUF_SIZE) {
+    if(readBlock(FLAG_LL_OPEN_TRANSMITTER) != READ_SUCCESS) {
       perror("Error reading from llopen\n");
       return -1;
     }
