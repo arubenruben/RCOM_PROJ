@@ -239,22 +239,13 @@ int llopen(int fd, int flag) {
   //Receives  SET/UA frame
   else if(flag == FLAG_LL_OPEN_RECEIVER) {
 
-    if(read(porta, buf, sizeof(buf)) != BUF_SIZE) {
+    if(readBlock(FLAG_LL_OPEN_RECEIVER) != READ_SUCCESS) {
       perror("Error in reading from llopen:");
       return -1;
     }
 
-    if(signal(SIGALRM, SIG_IGN) == SIG_ERR) {
-      perror("Error in ignoring SIG ALARM handler");
-    }
-
-    if(write(porta, buf, sizeof(buf)) != BUF_SIZE) {
+    if(sendBlock(FLAG_LL_OPEN_RECEIVER) != READ_SUCCESS) {
       perror("Error in writing from llopen:");
-      return -1;
-    }
-
-    if(signal(SIGALRM, alarm_handler) == SIG_ERR) {
-      perror("Error instaling SIG ALARM handler\n");
       return -1;
     }
   }

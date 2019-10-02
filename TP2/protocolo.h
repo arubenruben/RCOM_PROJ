@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <signal.h>
+#include <errno.h>
 #include "flags.h"
 
 /**
@@ -41,7 +42,15 @@ int llclose(int fd);
 * @param {...} buf
 * @param {...} n_bytes
 */
-int sendSet(int porta, unsigned char *buf, unsigned int n_bytes);
+int sendBlock(int flag);
+
+/**
+* ...description...
+* @param {...} porta
+* @param {...} buf
+* @param {...} n_bytes
+*/
+int readBlock(int flag);
 
 /**
 * ...description...
