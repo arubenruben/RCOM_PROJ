@@ -11,7 +11,7 @@
 #define FLAG_INDEX_END 4
 
 //Flags values
-#define FLAG 0x99
+#define FLAG 0x7E
 #define A_EM 0x03
 #define A_RE 0x01
 #define C_SET 0x03
@@ -21,6 +21,8 @@
 #define INVALID_PARAMS -1
 #define READ_SUCCESS 0
 #define READ_FAIL 1
+#define WRITE_SUCCESS 0
+#define WRITE_FAIL 1
 #define BUF_SIZE 5
 #define MAX_BUF 255
 
