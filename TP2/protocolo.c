@@ -4,17 +4,25 @@
 #define TIMEOUT 3
 
 static unsigned int porta = 0;
+static unsigned int tries_alarm=0;
+static bool alarm_active=true;
 
 void alarm_handler(int signo)
 {
+
+  if(alarm_active==false){
+    return;
+  }
   if (signo != SIGALRM)
   {
     printf("Handler nao executado\n");
     return;
   }
-
-  sendBlock(FLAG_LL_OPEN_TRANSMITTER);
-  alarm(TIMEOUT);
+  if(tries_alarm<MAX_RETR){
+    sendBlock(FLAG_LL_OPEN_TRANSMITTER);
+    alarm(TIMEOUT);
+  }
+  tries_alarm++;
 
   return;
 }
@@ -39,12 +47,15 @@ int sendBlock(int flag)
     {
       buf[C_INDEX] = C_UA;
     }
-
     buf[BCC_INDEX] = buf[A_INDEX] ^ buf[C_INDEX];
-
     buf[FLAG_INDEX_END] = FLAG;
 
-    int bytes_send = write(porta, buf, BUF_SIZE);
+
+
+    for(int i=0;i<BUF_SIZE;i++){
+      printf("Na pos %d: %x\n",i,buf[i]);
+    }
+    int bytes_send = write(porta, buf, sizeof(buf));
 
     if (bytes_send != BUF_SIZE)
     {
@@ -86,6 +97,10 @@ int readBlock(int flag)
         perror("Failled to read");
         return READ_FAIL;
       }
+
+      alarm_active==false;
+
+      printf("Recebi %x\n",buf[size]);
 
       switch (state)
       {
@@ -214,15 +229,16 @@ int llopen(int fd, int flag)
 
     int ret_read_block = READ_FAIL;
 
-    for (int tries = 0; tries < MAX_RETR; tries++)
-    {
+    while(tries_alarm<MAX_RETR){
 
       ret_read_block = readBlock(FLAG_LL_OPEN_TRANSMITTER);
 
-      if (ret_read_block == READ_SUCCESS)
-      {
+      if(ret_read_block==READ_SUCCESS){
+        //Paro o ciclo
+        printf("Parei o ciclo");
         break;
       }
+
     }
 
     if (ret_read_block == READ_FAIL)
