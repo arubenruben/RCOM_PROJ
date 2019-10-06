@@ -4,6 +4,8 @@
 #define TIMEOUT 3
 
 static unsigned int porta = 0;
+static int n_tries=MAX_RETR;
+
 
 void alarm_handler(int signo)
 {
@@ -12,9 +14,15 @@ void alarm_handler(int signo)
     printf("Handler nao executado\n");
     return;
   }
+  if(n_tries>0){
+    n_tries--;
+    sendBlock(FLAG_LL_OPEN_TRANSMITTER);
+    alarm(TIMEOUT);
+  }else{
+    llclose(porta);
+  }
 
-  sendBlock(FLAG_LL_OPEN_TRANSMITTER);
-  alarm(TIMEOUT);
+
 
   return;
 }
@@ -22,7 +30,7 @@ void alarm_handler(int signo)
 int sendBlock(int flag)
 {
 
-  unsigned char buf[BUF_SIZE];
+  unsigned char buf[BUF_SIZE+1];
 
   //A Flag inicial e comum a qualquer trama
   if (flag == FLAG_LL_OPEN_RECEIVER || flag == FLAG_LL_OPEN_TRANSMITTER)
@@ -43,20 +51,24 @@ int sendBlock(int flag)
     buf[BCC_INDEX] = buf[A_INDEX] ^ buf[C_INDEX];
 
     buf[FLAG_INDEX_END] = FLAG;
+    
 
+    //Coloquei este \0 de proposito para ver se as vezes nao sera este o problema
+    buf[BUF_SIZE]='\0';
+    //
+  
     int bytes_send = write(porta, buf, BUF_SIZE);
 
     if (bytes_send != BUF_SIZE)
     {
       perror("Error writing in llopen:");
-      return -1;
+      return WRITE_FAIL;
     }
 
     return WRITE_SUCCESS;
   }
   else
   {
-
     printf("SEND BLOCK not implemented\n");
     return WRITE_FAIL;
   }
@@ -65,7 +77,7 @@ int sendBlock(int flag)
 int readBlock(int flag)
 {
 
-  unsigned char buf[MAX_BUF];
+  unsigned char leitura;
   unsigned int size = 0, state = ST_START;
 
   if (flag == FLAG_LL_OPEN_RECEIVER || flag == FLAG_LL_OPEN_TRANSMITTER)
@@ -73,10 +85,9 @@ int readBlock(int flag)
 
     for (size = 0; state != ST_STOP && size < MAX_BUF; size++)
     {
-
       //A mensagem vai ser lida byte a byte para garantir que nao há falha de informacao
 
-      if (!read(porta, &buf[size], 1))
+      if (!read(porta, &leitura, 1))
       {
         if (errno == EINTR)
         {
@@ -86,52 +97,59 @@ int readBlock(int flag)
         perror("Failled to read");
         return READ_FAIL;
       }
-
       switch (state)
       {
-      case ST_START:
+      case ST_START:{
         //check FLAG byte
-        if (buf[size] == FLAG)
+        if (leitura == FLAG){
           state = ST_FLAG_RCV;
+        }
+      }
         break;
 
       case ST_FLAG_RCV:
 
-        switch (buf[size])
+        switch (leitura)
         {
-        case A_EM:
-
+        case A_EM:{
           //Recebi uma mensagem do emissor ou um resposta do recetor
           state = ST_A_RCV;
-
           break;
-
+        }
+    
         case FLAG:
           //Same state
 
           break;
         default:
           state = ST_START;
-          break;
         }
 
+        break;
+
       case ST_A_RCV:
-        switch (buf[size])
+        switch (leitura)
         {
         case C_UA:
 
-          if (flag == FLAG_LL_OPEN_TRANSMITTER)
+          if (flag == FLAG_LL_OPEN_TRANSMITTER){
             //received C_SET and is Transmitter, go to state C received
             state = ST_C_RCV;
+            break;
+
+          }
           else
             //received C_SET and is Receiver, go to state start
             state = ST_START;
+          
           break;
 
         case C_SET:
-          if (flag == FLAG_LL_OPEN_RECEIVER)
+          
+          if (flag == FLAG_LL_OPEN_RECEIVER){
             //received C_SET and is Receiver, go to state C received
             state = ST_C_RCV;
+          }
           else
             //received C_SET and is Transmitter, go to state start
             state = ST_START;
@@ -149,25 +167,42 @@ int readBlock(int flag)
         }
         break;
 
-      case ST_C_RCV:
+      case ST_C_RCV:{
+        
         //received BCC, check BCC
-        if (buf[size] == (A_EM ^ C_SET))
+                
+        if (leitura == (A_EM ^ C_SET)&&flag==FLAG_LL_OPEN_RECEIVER){
+
           //BCC correct
           state = ST_BCC_OK;
-        else if (buf[size] == FLAG)
+
+        }
+        else if(leitura == (A_EM ^ C_UA)&&flag==FLAG_LL_OPEN_TRANSMITTER){
+          state = ST_BCC_OK;
+        }
+        else if (leitura == FLAG){
+          
           //Received FLAG
           state = ST_FLAG_RCV;
-        else
+        }
+        else{
           //Received other
           state = ST_START;
 
+        }
+
         break;
+
+      }
+
 
       case ST_BCC_OK:
         //check FLAG byte
-        if (buf[size] == FLAG)
+        if (leitura == FLAG){
+
           //received all, stop cycle
           return READ_SUCCESS;
+        }
         else
           //received other, go to start
           state = ST_START;
@@ -178,7 +213,6 @@ int readBlock(int flag)
         break;
       }
     }
-    printf("Este return eu alterei para fail. Estava Sucess\n");
     return READ_FAIL;
   }
 
@@ -213,16 +247,9 @@ int llopen(int fd, int flag)
     alarm(TIMEOUT);
 
     int ret_read_block = READ_FAIL;
-
-    for (int tries = 0; tries < MAX_RETR; tries++)
-    {
-
+      
+    while(n_tries>0&&ret_read_block==READ_FAIL){
       ret_read_block = readBlock(FLAG_LL_OPEN_TRANSMITTER);
-
-      if (ret_read_block == READ_SUCCESS)
-      {
-        break;
-      }
     }
 
     if (ret_read_block == READ_FAIL)
@@ -256,4 +283,13 @@ int llopen(int fd, int flag)
 
   //LL open deve retornar identificador da ligacao de dados
   return fd;
+}
+
+int llclose(int fd){
+
+  if(close(fd)!=0){
+    perror("Erro a fechar a porta de serie:");
+  }
+
+  return 0;
 }

@@ -87,7 +87,6 @@ int main(int argc, char** argv)
     O ciclo FOR e as instru��es seguintes devem ser alterados de modo a respeitar
     o indicado no gui�o
   */
-
     sleep(1);
 
     if ( tcsetattr(fd,TCSANOW,&oldtio) == -1) {

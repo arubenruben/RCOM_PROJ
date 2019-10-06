@@ -76,15 +76,22 @@ int main(int argc, char** argv)
 
     printf("New termios structure set\n");
 
-    if(llopen(fd,FLAG_LL_OPEN_RECEIVER)){
-      printf("Erro a no receiver no llopen\n");
+    if(llopen(fd,FLAG_LL_OPEN_RECEIVER)<0){
+      printf("Erro no receiver no llopen\n");
+      return -1;
+    }
+
+
+    sleep(1); //Resolve bug de receber lixo
+    tcsetattr(fd,TCSANOW,&oldtio);
+    
+    if(llclose(fd)!=0){
+      printf("Erro no llclose\n");
+      return -1;
 
     }
 
 
 
-    sleep(1); //Resolve bug de receber lixo
-    tcsetattr(fd,TCSANOW,&oldtio);
-    close(fd);
     return 0;
 }
