@@ -28,12 +28,12 @@
 #define FLAG 0x7e
 #define A_CE_AR 0x03
 #define A_CR_AE 0x01
-#define C(s) ((s == 1)? 0x40: 0x00;)
+#define C(s) ((s == 1)? 0x40: 0x00);
 #define C_SET 0x03
 #define C_UA 0x07
 #define C_DISC 0x0B
-#define C_RR(r) ((r == 1)? 0x85: 0x05;)
-#define C_REJ(r) ((r == 1)? 0x81: 0x01;)
+#define C_RR(r) ((r == 1)? 0x85: 0x05);
+#define C_REJ(r) ((r == 1)? 0x81: 0x01);
 
 //Other variables
 #define BUF_SIZE 5
