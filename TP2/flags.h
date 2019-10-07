@@ -33,16 +33,17 @@
 #define FLAG 0x7e
 #define A_CE_AR 0x03
 #define A_CR_AE 0x01
-#define C(s) ((s == 1)? 0x40: 0x00);
+#define C(s) ((s == 1)? 0x40: 0x00)
 #define C_SET 0x03
 #define C_UA 0x07
 #define C_DISC 0x0B
-#define C_RR(r) ((r == 1)? 0x85: 0x05);
-#define C_REJ(r) ((r == 1)? 0x81: 0x01);
+#define C_RR(r) ((r == 1)? 0x85: 0x05)
+#define C_REJ(r) ((r == 1)? 0x81: 0x01)
 
 //Other variables
 #define BUF_SIZE 5
 #define MAX_BUF 255
+#define DATA_START_INDEX 4
 
 //Return types
 #define INVALID_PARAMS -1
@@ -61,6 +62,6 @@
 #define ST_A_RCV 2
 #define ST_C_RCV 3
 #define ST_BCC_OK 4
-#define ST_D_RCV 5
-#define ST_ESC_RCV 6
-#define ST_STOP 7
+#define ST_D 4
+#define ST_ESC_RCV 5
+#define ST_STOP 6
