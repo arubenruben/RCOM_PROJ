@@ -14,6 +14,11 @@
 #define FLAG_LL_OPEN_TRANSMITTER 1
 #define FLAG_LL_OPEN_RECEIVER 2
 
+#define FLAG_LL_CLOSE_TRANSMITTER_DISC 1
+#define FLAG_LL_CLOSE_TRANSMITTER_UA 2
+#define FLAG_LL_CLOSE_RECEIVER_DISC 3
+#define FLAG_LL_CLOSE_RECEIVER_UA 4
+
 //5 Byte message
 #define FLAG_INDEX_BEGIN 0
 #define A_INDEX 1
@@ -27,6 +32,7 @@
 #define A_CR_RE 0x01
 #define C_SET 0x03
 #define C_UA 0x07
+#define C_DISC 0x0B
 
 //Other variables
 #define INVALID_PARAMS -1

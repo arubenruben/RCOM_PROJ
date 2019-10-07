@@ -33,7 +33,7 @@ int llread(int fd, char * buffer);
 * ...description...
 * @param {...} fd
 */
-int llclose(int fd);
+int llclose(int fd,int flag);
 
 
 /**
@@ -42,7 +42,7 @@ int llclose(int fd);
 * @param {...} buf
 * @param {...} n_bytes
 */
-int sendBlock(int flag);
+int sendBlock(const int flag,const int fd);
 
 /**
 * ...description...
@@ -50,7 +50,7 @@ int sendBlock(int flag);
 * @param {...} buf
 * @param {...} n_bytes
 */
-int readBlock(int flag);
+int readBlock(const int flag,const int fd);
 
 /**
 * ...description...

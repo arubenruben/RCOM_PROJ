@@ -56,7 +56,7 @@ int main(int argc, char** argv)
   */
     sleep(1);
 
-    llclose(fd);
+    llclose(fd,FLAG_LL_CLOSE_RECEIVER_DISC);
     
     return 0;
 }
