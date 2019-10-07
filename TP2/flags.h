@@ -22,7 +22,8 @@
 #define FLAG_INDEX_END 4
 
 //Flags values
-#define FLAG 0x7E
+#define ESC 0x7d
+#define FLAG 0x7e
 #define A_CE_RR 0x03
 #define A_CR_RE 0x01
 #define C(s) ((s == 1)? 0x40: 0x00;)
