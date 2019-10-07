@@ -23,9 +23,11 @@
 
 //Flags values
 #define ESC 0x7d
+#define ESC_ESC 0x5d
+#define ESC_FLAG 0x5e
 #define FLAG 0x7e
-#define A_CE_RR 0x03
-#define A_CR_RE 0x01
+#define A_CE_AR 0x03
+#define A_CR_AE 0x01
 #define C(s) ((s == 1)? 0x40: 0x00;)
 #define C_SET 0x03
 #define C_UA 0x07
@@ -34,13 +36,16 @@
 #define C_REJ(r) ((r == 1)? 0x81: 0x01;)
 
 //Other variables
+#define BUF_SIZE 5
+#define MAX_BUF 255
+
+//Return types
 #define INVALID_PARAMS -1
 #define READ_SUCCESS 0
 #define READ_FAIL 1
 #define WRITE_SUCCESS 0
 #define WRITE_FAIL 1
-#define BUF_SIZE 5
-#define MAX_BUF 255
+#define NO_MEM -2
 
 //State machine flags
 #define ST_START 0
@@ -48,4 +53,6 @@
 #define ST_A_RCV 2
 #define ST_C_RCV 3
 #define ST_BCC_OK 4
-#define ST_STOP 5
+#define ST_D_RCV 5
+#define ST_ESC_RCV 6
+#define ST_STOP 7
