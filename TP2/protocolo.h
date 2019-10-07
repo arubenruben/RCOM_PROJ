@@ -7,6 +7,17 @@
 #include <errno.h>
 #include "flags.h"
 
+
+
+typedef struct {
+    unsigned char flag ;
+    unsigned char fieldA;
+    unsigned char fieldC;
+    unsigned char fieldBCC1;
+    unsigned char* fieldD;
+    unsigned char fieldBCC2;
+} DataStruct;
+
 /**
 * ...description...
 * @param {...} porta
@@ -36,24 +47,3 @@ int llread(int fd, char * buffer);
 int llclose(int fd,int flag);
 
 
-/**
-* ...description...
-* @param {...} porta
-* @param {...} buf
-* @param {...} n_bytes
-*/
-int sendBlock(const int flag,const int fd);
-
-/**
-* ...description...
-* @param {...} porta
-* @param {...} buf
-* @param {...} n_bytes
-*/
-int readBlock(const int flag,const int fd);
-
-/**
-* ...description...
-* @param {...} signo
-*/
-void alarm_handler(int signo);

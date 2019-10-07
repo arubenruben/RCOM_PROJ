@@ -14,6 +14,14 @@
 static struct termios oldtio;
 static int n_tries = MAX_RETR;
 
+void alarm_handler(int signo);
+int sendBlock(int flag,const int fd);
+int readBlock(int flag,const int fd); 
+
+DataStruct createMessage(unsigned int sequenceNumber);
+unsigned char BBC2Stufying (unsigned char BBC2);
+unsigned char* dataStuffing (unsigned char* data);
+
 int openNonCanonical(int port_number)
 {
   struct termios newtio;
@@ -430,6 +438,98 @@ int llopen(int port_number, int flag)
   //LL open deve retornar identificador da ligacao de dados
   return fd;
 }
+
+
+
+
+
+int llwrite(int fd, char * buffer, int length) 
+{
+  static unsigned int sequenceNumber = 0;
+  unsigned int num_bytes = 0;
+
+  DataStruct data = createMessage(sequenceNumber);
+
+   write(fd, &data, sizeof(data));
+
+
+  sequenceNumber = (sequenceNumber + 1) % 2;
+  return num_bytes;
+}
+
+
+DataStruct createMessage(unsigned int sequenceNumber) {
+  
+  DataStruct data;
+  data.flag = FLAG;
+  data.fieldC = C(sequenceNumber);
+  data.fieldBCC1 = data.fieldA ^ data.fieldC;
+  data.fieldD = "AAFF1AAF1AAFF1AAFF1AAFF1AAFF1AAFF1AAFF1AAFF1AAFF1";
+
+
+  for(int i=0; i<BLOCK_SIZE; i++) {
+    data.fieldBCC2 =  data.fieldBCC2 ^ data.fieldD[i];
+  }
+
+   data.fieldBCC2 = BBC2Stufying(data.fieldBCC2);
+  data.fieldD = dataStuffing(data.fieldD);
+
+  return data;
+}
+
+
+unsigned char BBC2Stufying (unsigned char BBC2) { 
+
+  unsigned char* stuffedBBC2 = (unsigned char*)malloc(sizeof(unsigned char));
+
+  if(BBC2== FLAG) {
+    stuffedBBC2 = (unsigned char *) realloc(stuffedBBC2, 2*sizeof(unsigned char));
+    stuffedBBC2[0] = ESC;
+    stuffedBBC2[1] = ESC_FLAG;
+  }
+
+
+
+ else if(BBC2 == ESC) {
+    stuffedBBC2 = (unsigned char *) realloc(stuffedBBC2, 2*sizeof(unsigned char));
+    stuffedBBC2[0] = ESC;
+    stuffedBBC2[1] = ESC_ESC;
+  }
+
+  else {
+    stuffedBBC2 = BBC2;
+  }
+
+    return stuffedBBC2;
+}
+
+
+unsigned char* dataStuffing (unsigned char* data) { 
+
+  unsigned char* buffer = (unsigned char *) malloc(MAX_BUF);
+  int maxSize = MAX_BUF;
+  int pos = 0;
+
+    for (int i = 0; data[i]!= NULL; i++) {
+    if(i > maxSize)
+      buffer = (char *) realloc(buffer, i + pos);
+       buffer[i] = data[i];
+
+    if(buffer[i] == FLAG) {
+      buffer[i] = ESC;
+      pos++;
+      buffer = (unsigned char *) realloc(buffer, i + pos);
+      buffer[i+1] = ESC_FLAG;
+    }
+        else if(buffer[i] == ESC) {
+      buffer[i] = ESC;
+      pos++;
+      buffer = (unsigned char *) realloc(buffer, i + pos);
+      buffer[i+1] = ESC_ESC;
+    }
+     return buffer;
+} 
+
 
 int llclose(int fd, int flag)
 {
