@@ -12,7 +12,7 @@
 * @param {...} porta
 * @param {...} flag
 */
-int llopen(int fd, int flag);
+int llopen(int port_number, int flag);
 
 /**
 * ...description...

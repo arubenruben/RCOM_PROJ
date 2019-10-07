@@ -3,12 +3,64 @@
 #define MAX_RETR 3
 #define TIMEOUT 3
 
-static unsigned int porta = 0;
-static int n_tries=MAX_RETR;
+static struct termios oldtio;
 
+int openNonCanonical(int port_number){
+  struct termios newtio;
+  int fd_port = 0;
+
+  switch (port_number) {
+    case 0:
+      fd_port = open(MODEMDEVICE_0, O_RDWR | O_NOCTTY );
+      break;
+    case 1:
+      fd_port = open(MODEMDEVICE_1, O_RDWR | O_NOCTTY );
+      break;
+    default:
+      return UNKNOWN_PORT;
+  }
+
+  if (fd_port < 0) {
+    perror("Error");
+    exit(OTHER_ERROR);
+  }
+
+  if ( tcgetattr(fd,&oldtio) == -1) { /* save current port settings */
+    perror("tcgetattr");
+    exit(OTHER_ERROR);
+  }
+
+  bzero(&newtio, sizeof(newtio));
+  newtio.c_cflag = BAUDRATE | CS8 | CLOCAL | CREAD;
+  newtio.c_iflag = IGNPAR;
+  newtio.c_oflag = 0;
+
+  /* set input mode (non-canonical, no echo,...) */
+  newtio.c_lflag = 0;
+
+  newtio.c_cc[VTIME]    = 0;   /* inter-character timer unused */
+  newtio.c_cc[VMIN]     = 0;   /* blocking read until 1 char received */
+
+
+  /*
+    VTIME e VMIN devem ser alterados de forma a proteger com um temporizador a
+    leitura do(s) pr�ximo(s) caracter(es)
+  */
+
+  tcflush(fd, TCIOFLUSH);
+
+  if ( tcsetattr(fd,TCSANOW,&newtio) == -1) {
+    perror("tcsetattr");
+    exit(OTHER_ERROR);
+  }
+
+  return fd_port;
+}
 
 void alarm_handler(int signo)
 {
+  static int n_tries = MAX_RETR;
+
   if (signo != SIGALRM)
   {
     printf("Handler nao executado\n");
@@ -19,10 +71,9 @@ void alarm_handler(int signo)
     sendBlock(FLAG_LL_OPEN_TRANSMITTER);
     alarm(TIMEOUT);
   }else{
-    llclose(porta);
+    n_tries = MAX_RETR;
+    llclose(fd);
   }
-
-
 
   return;
 }
@@ -51,13 +102,13 @@ int sendBlock(int flag)
     buf[BCC_INDEX] = buf[A_INDEX] ^ buf[C_INDEX];
 
     buf[FLAG_INDEX_END] = FLAG;
-    
+
 
     //Coloquei este \0 de proposito para ver se as vezes nao sera este o problema
     buf[BUF_SIZE]='\0';
     //
-  
-    int bytes_send = write(porta, buf, BUF_SIZE);
+
+    int bytes_send = write(fd, buf, BUF_SIZE);
 
     if (bytes_send != BUF_SIZE)
     {
@@ -87,7 +138,7 @@ int readBlock(int flag)
     {
       //A mensagem vai ser lida byte a byte para garantir que nao há falha de informacao
 
-      if (!read(porta, &leitura, 1))
+      if (!read(fd, &leitura, 1))
       {
         if (errno == EINTR)
         {
@@ -116,7 +167,7 @@ int readBlock(int flag)
           state = ST_A_RCV;
           break;
         }
-    
+
         case FLAG:
           //Same state
 
@@ -141,11 +192,11 @@ int readBlock(int flag)
           else
             //received C_SET and is Receiver, go to state start
             state = ST_START;
-          
+
           break;
 
         case C_SET:
-          
+
           if (flag == FLAG_LL_OPEN_RECEIVER){
             //received C_SET and is Receiver, go to state C received
             state = ST_C_RCV;
@@ -168,9 +219,9 @@ int readBlock(int flag)
         break;
 
       case ST_C_RCV:{
-        
+
         //received BCC, check BCC
-                
+
         if (leitura == (A_EM ^ C_SET)&&flag==FLAG_LL_OPEN_RECEIVER){
 
           //BCC correct
@@ -181,7 +232,7 @@ int readBlock(int flag)
           state = ST_BCC_OK;
         }
         else if (leitura == FLAG){
-          
+
           //Received FLAG
           state = ST_FLAG_RCV;
         }
@@ -223,12 +274,19 @@ int readBlock(int flag)
   }
 }
 
-int llopen(int fd, int flag)
+int llopen(int port_number, int flag)
 {
+  int fd;
 
-  porta = fd;
+  fd = openNonCanonical(port_number);
 
-  //Sending SET/UA frame
+  if(fd == UNKNOWN_PORT){
+    printf("Unknown port, must be either 0 or 1\n");
+    exit(UNKNOWN_PORT);
+  }
+
+
+  //Transmitter
   if (flag == FLAG_LL_OPEN_TRANSMITTER)
   {
 
@@ -247,7 +305,7 @@ int llopen(int fd, int flag)
     alarm(TIMEOUT);
 
     int ret_read_block = READ_FAIL;
-      
+
     while(n_tries>0&&ret_read_block==READ_FAIL){
       ret_read_block = readBlock(FLAG_LL_OPEN_TRANSMITTER);
     }
@@ -264,7 +322,7 @@ int llopen(int fd, int flag)
     }
   }
 
-  //Receives SET frame
+  //Receiver
   else if (flag == FLAG_LL_OPEN_RECEIVER)
   {
 
@@ -287,8 +345,13 @@ int llopen(int fd, int flag)
 
 int llclose(int fd){
 
+  if ( tcsetattr(fd,TCSANOW,&oldtio) == -1) {
+    perror("tcsetattr");
+    exit(-1);
+  }
+
   if(close(fd)!=0){
-    perror("Erro a fechar a porta de serie:");
+    perror("Failled to close file");
   }
 
   return 0;

@@ -1,5 +1,16 @@
 #pragma once
 
+//Port settings
+#define BAUDRATE B38400
+#define MODEMDEVICE_0 "/dev/ttyS0"
+#define MODEMDEVICE_1 "/dev/ttyS1"
+#define _POSIX_SOURCE 1 /* POSIX compliant source */
+#define FALSE 0
+#define TRUE 1
+#define UNKNOWN_PORT -1
+#define OTHER_ERROR -2
+
+
 #define FLAG_LL_OPEN_TRANSMITTER 1
 #define FLAG_LL_OPEN_RECEIVER 2
 
