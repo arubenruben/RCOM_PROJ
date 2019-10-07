@@ -8,12 +8,12 @@ static struct termios oldtio;
 static int n_tries = MAX_RETR;
 
 void alarm_handler(int signo);
-int sendBlock(int flag);
-int readBlock(int flag); 
+int sendBlock(const int flag, const int fd);
+int readBlock(const int flag, const int fd);
 
-DataStruct createMessage(unsigned int sequenceNumber, int length, int *dataStufSize, int *bcc2StufSize);
-unsigned char BBC2Stufying (unsigned char BBC2, int *bcc2StufSize);
-unsigned char* dataStuffing (unsigned char* data, int length, int *buffer);
+DataStruct createMessage(unsigned int sequenceNumber, char *buffer, int length);
+unsigned char* BBC2Stufying (unsigned char *BBC2, int *bcc2StufSize);
+unsigned char* dataStuffing (unsigned char *data, int *dataStufSize);
 
 
 int openNonCanonical(int port_number)
@@ -471,20 +471,20 @@ int llopen(int port_number, int flag)
 }
 
 
-int llwrite(int fd, char * buffer, int length) 
-{
+int llwrite(int fd, char * buffer, int length)  {
+
   int num_bytes = 0;
   int dataStufSize = length;
   int bcc2StufSize = 1;
   unsigned char answer;
   static unsigned int sequenceNumber = 0;
 
-  DataStruct data = createMessage(sequenceNumber, length, &dataStufSize, &bcc2StufSize);
+  DataStruct data = createMessage(sequenceNumber, buffer, length);
 
   while(answer != C_RR((sequenceNumber + 1) % 2)) {
 
     if (signal(SIGALRM, alarm_handler) == SIG_ERR) {
-    perror("Error in ignoring SIG ALARM handler");
+      perror("Error in ignoring SIG ALARM handler");
     }
 
     if((num_bytes = write(fd, &data, 4 * sizeof(unsigned char))) != 4)
@@ -595,8 +595,8 @@ int llread(int fd, char *buffer){
           }
 
           else{
-            state = ST_START
-            size_buf =START_INDEX;
+            state = ST_START;
+            size_buf = START_INDEX;
           }
 
         }
@@ -631,7 +631,7 @@ int llread(int fd, char *buffer){
           if(buf[size_buf] != ESC_FLAG & buf[size_buf] != ESC_ESC)
             error = true;
 
-          state = ST_BCC_OK_D;
+          state = ST_BCC_OK;
 
         }
           break;
@@ -664,37 +664,37 @@ int llread(int fd, char *buffer){
   return size_buffer-1;
 }
 
-DataStruct createMessage(unsigned int sequenceNumber, int length, int *dataStufSize, int *bcc2StufSize) {
-  
+DataStruct createMessage(unsigned int sequenceNumber, char* buffer, int length) {
+    
   DataStruct data;
-
   data.flag = FLAG;
   data.fieldC = C(sequenceNumber);
   data.fieldBCC1 = data.fieldA ^ data.fieldC;
-  data.fieldD = "AAFF1AAF1AAFF1AAFF1AAFF1AAFF1AAFF1AAFF1AAFF1AAFF1";
+  *(data.fieldBCC2) = data.fieldBCC1;
 
   for(int i = 0; i < length; i++) {
-    data.fieldBCC2 =  data.fieldBCC2 ^ data.fieldD[i];
+    *(data.fieldBCC2) =  *(data.fieldBCC2) ^ data.fieldD[i];
   }
 
-  data.fieldBCC2 = BBC2Stufying(data.fieldBCC2, bcc2StufSize);
-  data.fieldD = dataStuffing(data.fieldD, length, dataStufSize);
+  data.fieldBCC2 = BBC2Stufying(data.fieldBCC2, data.bcc2StufSize);
+  *(data.dataStufSize) = length;
+  data.fieldD = dataStuffing(buffer, data.dataStufSize);
   
   return data;
 }
 
-unsigned char BBC2Stufying (unsigned char BBC2, int *bcc2StufSize) { 
+unsigned char* BBC2Stufying (unsigned char *BBC2, int *bcc2StufSize) { 
   
   unsigned char* stuffedBBC2 = (unsigned char*)malloc(sizeof(unsigned char));
 
-  if(BBC2== FLAG) {
+  if(*BBC2 == FLAG) {
     stuffedBBC2 = (unsigned char *) realloc(stuffedBBC2, 2*sizeof(unsigned char));
     stuffedBBC2[0] = ESC;
     stuffedBBC2[1] = ESC_FLAG;
     *bcc2StufSize = 2;
   }
 
-  else if(BBC2 == ESC) {
+  else if(*BBC2 == ESC) {
     stuffedBBC2 = (unsigned char *) realloc(stuffedBBC2, 2*sizeof(unsigned char));
     stuffedBBC2[0] = ESC;
     stuffedBBC2[1] = ESC_ESC;
@@ -702,19 +702,19 @@ unsigned char BBC2Stufying (unsigned char BBC2, int *bcc2StufSize) {
   }
 
   else {
-    stuffedBBC2 = BBC2;
+    stuffedBBC2[0] = *BBC2;
     *bcc2StufSize = 1;
   }
 
   return stuffedBBC2;
 }
 
-unsigned char* dataStuffing (unsigned char* data, int length, int *dataStufSize) { 
+unsigned char* dataStuffing (unsigned char* data, int *dataStufSize) { 
   
-  unsigned char* buffer = (unsigned char *) malloc(2 *length);
+  unsigned char* buffer = (unsigned char *) malloc(2 *(*dataStufSize));
   int pos = 0;
 
-  for (int i = 0; i < length; i++) {
+  for (int i = 0; i < *dataStufSize; i++) {
     
     buffer[i + pos] = data[i];
 
@@ -729,13 +729,12 @@ unsigned char* dataStuffing (unsigned char* data, int length, int *dataStufSize)
       pos++;
       buffer[i+pos] = ESC_ESC;
     }
-
-    *dataStufSize = length;
   }
+
+  *dataStufSize += pos;
 
   return buffer;
 }
-
 
 int llclose(int fd, int flag)
 {

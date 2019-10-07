@@ -26,6 +26,8 @@
 #define BCC_INDEX 3
 #define FLAG_INDEX_END 4
 
+#define START_INDEX 0
+
 //Flags values
 #define ESC 0x7d
 #define ESC_ESC 0x5d

@@ -22,7 +22,11 @@ typedef struct {
     unsigned char fieldC;
     unsigned char fieldBCC1;
     unsigned char* fieldD;
-    unsigned char fieldBCC2;
+    unsigned char* fieldBCC2;
+    
+    //Other important variables
+    unsigned int *bcc2StufSize;
+    unsigned int *dataStufSize;
 } DataStruct;
 
 /**
