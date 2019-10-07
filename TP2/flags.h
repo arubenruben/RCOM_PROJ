@@ -23,8 +23,8 @@
 
 //Flags values
 #define FLAG 0x7E
-#define A_EM 0x03
-#define A_RE 0x01
+#define A_CE_RR 0x03
+#define A_CR_RE 0x01
 #define C_SET 0x03
 #define C_UA 0x07
 
