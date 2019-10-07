@@ -44,29 +44,3 @@ int llread(int fd, char * buffer);
 * @param {...} fd
 */
 int llclose(int fd);
-
-
-/**
-* ...description...
-* @param {...} flag
-*/
-int sendBlock(int flag);
-
-/**
-* ...description...
-* @param {...} flag
-*/
-int readBlock(int flag);
-
-/**
-* ...description...
-* @param {...} signo
-*/
-void alarm_handler(int signo);
-
-
-
-
-DataStruct createMessage(int size);
-
-DataStruct sendMessage();

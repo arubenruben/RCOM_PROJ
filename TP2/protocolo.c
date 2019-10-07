@@ -83,7 +83,7 @@ int llwrite(int fd, char * buffer, int length)
 
   DataStruct data = createMessage(sequenceNumber);
 
-  write(fd, )
+  write(fd, &data, sizeof(data));
 
 
   sequenceNumber = (sequenceNumber + 1) % 2;
