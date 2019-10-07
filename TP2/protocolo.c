@@ -441,21 +441,21 @@ int llclose(int fd, int flag)
     if (sendBlock(flag, FLAG_LL_CLOSE_TRANSMITTER_DISC) != WRITE_SUCCESS)
     {
       printf("Erro a enviar FLAG_LL_CLOSE_TRANSMITTER_DISC\n");
-     return LL_CLOSE_FAIL;
+      return -1;
     }
 
     alarm(TIMEOUT);
 
     if(readBlock(flag,FLAG_LL_CLOSE_TRANSMITTER_DISC)!=READ_SUCCESS){
       printf("Erro a enviar FLAG_LL_CLOSE_TRANSMITTER_UA\n");
-     return LL_CLOSE_FAIL;
+      return -1;
 
     }
 
     if (sendBlock(flag, FLAG_LL_CLOSE_TRANSMITTER_UA) != WRITE_SUCCESS)
     {
       printf("Erro a enviar FLAG_LL_CLOSE_TRANSMITTER_UA\n");
-     return LL_CLOSE_FAIL;
+      return -1;
     }
 
   }
@@ -467,19 +467,18 @@ int llclose(int fd, int flag)
 
     if(signal(SIGALRM,alarm_handler)<0){
       perror("Erro a instalar o handler no LL_CLOSE, no receiver");
-      return LL_CLOSE_FAIL;
     }
 
     if(readBlock(flag,FLAG_LL_CLOSE_RECEIVER_DISC)!=READ_SUCCESS){
       printf("Erro a enviar FLAG_LL_CLOSE_TRANSMITTER_UA\n");
-     return LL_CLOSE_FAIL;
+      return -1;
 
     }
 
     if (sendBlock(flag, FLAG_LL_CLOSE_RECEIVER_DISC) != WRITE_SUCCESS)
     {
       printf("Erro a enviar FLAG_LL_CLOSE_TRANSMITTER_DISC\n");
-     return LL_CLOSE_FAIL;
+      return -1;
     }
 
     alarm(TIMEOUT);
@@ -487,14 +486,15 @@ int llclose(int fd, int flag)
 
      if(readBlock(flag,FLAG_LL_CLOSE_RECEIVER_UA)!=READ_SUCCESS){
       printf("Erro a enviar FLAG_LL_CLOSE_TRANSMITTER_UA\n");
-      return LL_CLOSE_FAIL;
+      return -1;
     }
 
   }
   else
   {
+
     printf("ERRO EM LLCLOSE");
-    return LL_CLOSE_FAIL;
+    return OTHER_ERROR;
   }
 
   if (tcsetattr(fd, TCSANOW, &oldtio) == -1)
@@ -506,8 +506,7 @@ int llclose(int fd, int flag)
   if (close(fd) != 0)
   {
     perror("Failled to close file");
-    return LL_CLOSE_FAIL;
   }
 
-  return LL_CLOSE_SUCESS;
+  return 0;
 }
