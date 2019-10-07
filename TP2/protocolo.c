@@ -439,25 +439,35 @@ int llwrite(int fd, char * buffer, int length)
   int num_bytes = 0;
   int dataStufSize = length;
   int bcc2StufSize = 1;
+  unsigned char answer;
   static unsigned int sequenceNumber = 0;
 
   DataStruct data = createMessage(sequenceNumber, length, &dataStufSize, &bcc2StufSize);
 
-  if((num_bytes = write(fd, &data, 4 * sizeof(unsigned char))) != 4)
-    return -1;
+  while(answer != C_RR((sequenceNumber + 1) % 2)) {
+
+    if (signal(SIGALRM, alarm_handler) == SIG_ERR) {
+    perror("Error in ignoring SIG ALARM handler");
+    }
+
+    if((num_bytes = write(fd, &data, 4 * sizeof(unsigned char))) != 4)
+      return -1;
+      
+    if((num_bytes = write(fd, &data.fieldD, dataStufSize*sizeof(unsigned char))) != dataStufSize)
+      return -1;
     
-  if((num_bytes = write(fd, &data.fieldD, dataStufSize*sizeof(unsigned char))) != dataStufSize)
-    return -1;
-  
-  if((num_bytes = write(fd, &data.fieldBCC2, sizeof(unsigned char))) != 1)
-    return -1;
+    if((num_bytes = write(fd, &data.fieldBCC2, sizeof(unsigned char))) != 1)
+      return -1;
 
-  if((num_bytes = write(fd, &data.flag, sizeof(unsigned char))) != 1)
-    return -1;
-
+    if((num_bytes = write(fd, &data.flag, sizeof(unsigned char))) != 1)
+      return -1;
  
-  alarm(TIMEOUT);
+    alarm(TIMEOUT);
 
+    read(fd, &answer, 1);
+
+    signal(SIGALRM, SIG_IGN);
+  }
 
   sequenceNumber = (sequenceNumber + 1) % 2;
   
