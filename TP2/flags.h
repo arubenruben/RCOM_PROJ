@@ -37,11 +37,8 @@
 #define C_SET 0x03
 #define C_UA 0x07
 #define C_DISC 0x0B
-<<<<<<< HEAD
-=======
 #define C_RR(r) ((r == 1)? 0x85: 0x05);
 #define C_REJ(r) ((r == 1)? 0x81: 0x01);
->>>>>>> 3e005641529d8f123965d2f3eaf3b77921a86090
 
 //Other variables
 #define BUF_SIZE 5
