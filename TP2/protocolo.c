@@ -15,12 +15,13 @@ static struct termios oldtio;
 static int n_tries = MAX_RETR;
 
 void alarm_handler(int signo);
-int sendBlock(int flag,const int fd);
-int readBlock(int flag,const int fd); 
+int sendBlock(int flag);
+int readBlock(int flag); 
 
-DataStruct createMessage(unsigned int sequenceNumber);
-unsigned char BBC2Stufying (unsigned char BBC2);
-unsigned char* dataStuffing (unsigned char* data);
+DataStruct createMessage(unsigned int sequenceNumber, int length, int *dataStufSize, int *bcc2StufSize);
+unsigned char BBC2Stufying (unsigned char BBC2, int *bcc2StufSize);
+unsigned char* dataStuffing (unsigned char* data, int length, int *buffer);
+
 
 int openNonCanonical(int port_number)
 {
@@ -440,95 +441,108 @@ int llopen(int port_number, int flag)
 }
 
 
-
-
-
 int llwrite(int fd, char * buffer, int length) 
 {
+  int num_bytes = 0;
+  int dataStufSize = length;
+  int bcc2StufSize = 1;
   static unsigned int sequenceNumber = 0;
-  unsigned int num_bytes = 0;
 
-  DataStruct data = createMessage(sequenceNumber);
+  DataStruct data = createMessage(sequenceNumber, length, &dataStufSize, &bcc2StufSize);
 
-   write(fd, &data, sizeof(data));
+  if((num_bytes = write(fd, &data, 4 * sizeof(unsigned char))) != 4)
+    return -1;
+    
+  if((num_bytes = write(fd, &data.fieldD, dataStufSize*sizeof(unsigned char))) != dataStufSize)
+    return -1;
+  
+  if((num_bytes = write(fd, &data.fieldBCC2, sizeof(unsigned char))) != 1)
+    return -1;
+
+  if((num_bytes = write(fd, &data.flag, sizeof(unsigned char))) != 1)
+    return -1;
+
+ 
+  alarm(TIMEOUT);
 
 
   sequenceNumber = (sequenceNumber + 1) % 2;
-  return num_bytes;
+  
+  return (dataStufSize + 5);
 }
 
 
-DataStruct createMessage(unsigned int sequenceNumber) {
+DataStruct createMessage(unsigned int sequenceNumber, int length, int *dataStufSize, int *bcc2StufSize) {
   
   DataStruct data;
+
   data.flag = FLAG;
   data.fieldC = C(sequenceNumber);
   data.fieldBCC1 = data.fieldA ^ data.fieldC;
   data.fieldD = "AAFF1AAF1AAFF1AAFF1AAFF1AAFF1AAFF1AAFF1AAFF1AAFF1";
 
-
-  for(int i=0; i<BLOCK_SIZE; i++) {
+  for(int i = 0; i < length; i++) {
     data.fieldBCC2 =  data.fieldBCC2 ^ data.fieldD[i];
   }
 
-   data.fieldBCC2 = BBC2Stufying(data.fieldBCC2);
-  data.fieldD = dataStuffing(data.fieldD);
-
+  data.fieldBCC2 = BBC2Stufying(data.fieldBCC2, bcc2StufSize);
+  data.fieldD = dataStuffing(data.fieldD, length, dataStufSize);
+  
   return data;
 }
 
-
-unsigned char BBC2Stufying (unsigned char BBC2) { 
-
+unsigned char BBC2Stufying (unsigned char BBC2, int *bcc2StufSize) { 
+  
   unsigned char* stuffedBBC2 = (unsigned char*)malloc(sizeof(unsigned char));
 
   if(BBC2== FLAG) {
     stuffedBBC2 = (unsigned char *) realloc(stuffedBBC2, 2*sizeof(unsigned char));
     stuffedBBC2[0] = ESC;
     stuffedBBC2[1] = ESC_FLAG;
+    *bcc2StufSize = 2;
   }
 
-
-
- else if(BBC2 == ESC) {
+  else if(BBC2 == ESC) {
     stuffedBBC2 = (unsigned char *) realloc(stuffedBBC2, 2*sizeof(unsigned char));
     stuffedBBC2[0] = ESC;
     stuffedBBC2[1] = ESC_ESC;
+    *bcc2StufSize = 2;
   }
 
   else {
     stuffedBBC2 = BBC2;
+    *bcc2StufSize = 1;
   }
 
-    return stuffedBBC2;
+  return stuffedBBC2;
 }
 
-
-unsigned char* dataStuffing (unsigned char* data) { 
-
-  unsigned char* buffer = (unsigned char *) malloc(MAX_BUF);
-  int maxSize = MAX_BUF;
+unsigned char* dataStuffing (unsigned char* data, int length, int *dataStufSize) { 
+  
+  unsigned char* buffer = (unsigned char *) malloc(2 *length);
   int pos = 0;
 
-    for (int i = 0; data[i]!= NULL; i++) {
-    if(i > maxSize)
-      buffer = (char *) realloc(buffer, i + pos);
-       buffer[i] = data[i];
+  for (int i = 0; i < length; i++) {
+    
+    buffer[i + pos] = data[i];
 
     if(buffer[i] == FLAG) {
       buffer[i] = ESC;
       pos++;
-      buffer = (unsigned char *) realloc(buffer, i + pos);
-      buffer[i+1] = ESC_FLAG;
+      buffer[i+pos] = ESC_FLAG;
     }
-        else if(buffer[i] == ESC) {
+
+    else if(buffer[i] == ESC) {
       buffer[i] = ESC;
       pos++;
-      buffer = (unsigned char *) realloc(buffer, i + pos);
-      buffer[i+1] = ESC_ESC;
+      buffer[i+pos] = ESC_ESC;
     }
-     return buffer;
-} 
+
+    *dataStufSize = length;
+  }
+
+  return buffer;
+}
 
 
 int llclose(int fd, int flag)
