@@ -89,6 +89,43 @@ void alarm_handler(int signo)
   return;
 }
 
+int checkBCC2(unsigned char *buffer, unsigned int size){
+  unsigned char bcc = buffer[size - 2];
+  unsigned char bcc_check = 0;
+
+  for(int i = 4; i < (size - 2); i++){
+    bcc_check ^= buffer[size];
+  }
+
+  return bcc == bcc_check;
+}
+
+int byteDeStuffing(unsigned char *dest, unsigned char *orig, unsigned int size_orig){
+  int size_dest = 0;
+
+  dest = (unsigned char*) malloc(size_orig * sizeof(unsigned char*));
+  if(dest == NULL){
+    perror("Failled to allocate memory");
+    exit(NO_MEM);
+  }
+
+  for(int i = DATA_START_INDEX; i < (size_orig - 1); i++){
+    if(orig[i] == ESC){
+      i++;
+      if(orig[i] == ESC_FLAG)
+        dest[size_dest] = FLAG;
+      else
+        dest[size_dest] = ESC;
+    }
+    else
+      dest[size_dest] = orig[i];
+
+    size_dest++;
+  }
+
+  return size_dest;
+}
+
 int sendBlock(const int flag, const int fd)
 {
 
@@ -474,6 +511,158 @@ int llwrite(int fd, char * buffer, int length)
   return (dataStufSize + 5);
 }
 
+int llread(int fd, char *buffer){
+  static unsigned int r = 0;
+
+  unsigned int size_buf = 0, state = ST_START, max_size = MAX_BUF;
+  bool error = false;
+  unsigned char *buf = NULL;
+  unsigned char answer = C_REJ(r);
+  int size_buffer = 0;
+
+  if(buffer == NULL || fd < 0){
+    printf("Passei parametros invalidos a llread\n");
+    return INVALID_PARAMS;
+
+  }
+
+  buf = (unsigned char*) malloc(max_size * sizeof(unsigned char));
+
+  if(buf == NULL){
+    perror("Failled to allocate memory");
+    exit(NO_MEM);
+  }
+
+  //While data is rejected be cause of errors go to state machine
+  while(answer == C_REJ(r)){
+
+    //State machine
+    for ( ; state != ST_STOP; size_buf++){
+      //Check size
+      if(size_buf > max_size){
+        max_size *= 2;
+        buf = (unsigned char*) realloc((void*)buf, max_size * sizeof(unsigned char));
+
+        if(buf == NULL){
+          perror("Failled to allocate memory");
+          exit(NO_MEM);
+        }
+
+      }
+
+      //Read byte
+      if (!read(fd, &buf[size_buf], 1)){
+        free(buf);
+        perror("Failled to read");
+        return READ_FAIL;
+      }
+
+      //Go through state machine
+      switch (state) {
+
+        case ST_START:{
+
+          if(buf[size_buf] == FLAG)
+            state = ST_FLAG_RCV;
+          else size_buf=START_INDEX;
+        }
+
+        break;
+
+        case ST_FLAG_RCV:{
+
+          if(buf[size_buf] == A_CE_AR)
+            state = ST_A_RCV;
+
+          else if(buf[size_buf] != FLAG){
+            state = ST_START;
+            size_buf =START_INDEX;
+          }
+
+          else size_buf--;
+        }
+
+        break;
+
+        case ST_A_RCV:{
+
+          if(buf[size_buf] == C(r))
+            state = ST_C_RCV;
+
+          else if(buf[size_buf] == FLAG){
+            state = ST_FLAG_RCV;
+            size_buf -= 2;
+          }
+
+          else{
+            state = ST_START
+            size_buf =START_INDEX;
+          }
+
+        }
+        break;
+
+        case ST_C_RCV:{
+
+          if(buf[size_buf] == (A_CE_AR^C(r)) )
+            state = ST_BCC_OK;
+
+          else if(buf[size_buf] == FLAG){
+            state = ST_FLAG_RCV;
+            size_buf -= 3;
+          }
+          else{
+            state = ST_START;
+            size_buf =START_INDEX;
+          }
+        }
+        break;
+
+        case ST_D:{
+
+          if(buf[size_buf] == FLAG)
+            state = ST_STOP;
+          else if(buf[size_buf] == ESC)
+            state = ST_ESC_RCV;
+        }
+        break;
+
+        case ST_ESC_RCV:{
+          if(buf[size_buf] != ESC_FLAG & buf[size_buf] != ESC_ESC)
+            error = true;
+
+          state = ST_BCC_OK_D;
+
+        }
+          break;
+      }
+    }
+
+
+    if(!error){
+      //Byte destuffing, returns size of buffer
+      size_buffer = byteDeStuffing(buffer, buf, size_buf);
+
+      //Check BCC2
+      if(checkBCC2(buffer, size_buffer)){
+        r = (r+1) % 2;
+        answer = C_RR(r);
+      }
+      else  //Free memory allocated for buffer
+        free(buffer);
+    }
+
+    //Send acknowlegment
+    write(fd, &answer, 1);
+    size_buf = DATA_START_INDEX;
+    state = ST_D;
+  }
+
+  //Free read buf
+  free(buf);
+
+  return size_buffer-1;
+}
 
 DataStruct createMessage(unsigned int sequenceNumber, int length, int *dataStufSize, int *bcc2StufSize) {
   
