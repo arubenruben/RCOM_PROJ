@@ -1,103 +1,133 @@
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <termios.h>
-#include <string.h>
-#include <fcntl.h>
-#include <stdlib.h>
 #include "protocolo.h"
-
 
 #define MAX_RETR 3
 #define TIMEOUT 3
 
-static struct termios oldtio;
-static int n_tries = MAX_RETR;
+static unsigned int porta = 0;
+static int n_tries=MAX_RETR;
 
-int openNonCanonical(int port_number)
-{
-  struct termios newtio;
+void alarm_handler(int signo);
+int sendBlock(int flag);
+int readBlock(int flag); 
 
-  int fd_port = 0;
+DataStruct createMessage(unsigned int sequenceNumber);
+unsigned char BBC2Stufying (unsigned char BBC2);
+unsigned char* dataStuffing (unsigned char* data);
 
-  switch (port_number)
+
+int llopen(int fd, int flag) {
+
+  porta = fd;
+
+  //Sending SET/UA frame
+  if (flag == FLAG_LL_OPEN_TRANSMITTER)
   {
-  case 0:
-    fd_port = open(MODEMDEVICE_0, O_RDWR | O_NOCTTY);
-    break;
-  case 1:
-    fd_port = open(MODEMDEVICE_1, O_RDWR | O_NOCTTY);
-    break;
-  default:
-    return UNKNOWN_PORT;
+
+    if (signal(SIGALRM, alarm_handler) == SIG_ERR)
+    {
+      perror("Error instaling SIG ALARM handler\n");
+      return -1;
+    }
+
+    if (sendBlock(FLAG_LL_OPEN_TRANSMITTER) != WRITE_SUCCESS)
+    {
+      printf("Error in sendSet function\n");
+    }
+
+    //Set alarm
+    alarm(TIMEOUT);
+
+    int ret_read_block = READ_FAIL;
+      
+    while(n_tries>0&&ret_read_block==READ_FAIL){
+      ret_read_block = readBlock(FLAG_LL_OPEN_TRANSMITTER);
+    }
+
+    if (ret_read_block == READ_FAIL)
+    {
+      printf("AS tentativas todas deram fail. Retornei erro\n");
+      return READ_FAIL;
+    }
+
+    if (signal(SIGALRM, SIG_IGN) == SIG_ERR)
+    {
+      perror("Error in ignoring SIG ALARM handler");
+    }
   }
 
-  if (fd_port < 0)
+  //Receives SET frame
+  else if (flag == FLAG_LL_OPEN_RECEIVER)
   {
-    perror("Error");
-    exit(OTHER_ERROR);
+
+    if (readBlock(FLAG_LL_OPEN_RECEIVER) != READ_SUCCESS)
+    {
+      perror("Error in reading from llopen:");
+      return -1;
+    }
+
+    if (sendBlock(FLAG_LL_OPEN_RECEIVER) != WRITE_SUCCESS)
+    {
+      perror("Error in writing from llopen:");
+      return -1;
+    }
   }
 
-  if (tcgetattr(fd_port, &oldtio) == -1)
-  { /* save current port settings */
-    perror("tcgetattr");
-    exit(OTHER_ERROR);
-  }
-
-  bzero(&newtio, sizeof(newtio));
-  newtio.c_cflag = BAUDRATE | CS8 | CLOCAL | CREAD;
-  newtio.c_iflag = IGNPAR;
-  newtio.c_oflag = 0;
-
-  /* set input mode (non-canonical, no echo,...) */
-  newtio.c_lflag = 0;
-
-  newtio.c_cc[VTIME] = 0; /* inter-character timer unused */
-  newtio.c_cc[VMIN] = 0;  /* blocking read until 1 char received */
-
-  /*
-    VTIME e VMIN devem ser alterados de forma a proteger com um temporizador a
-    leitura do(s) pr�ximo(s) caracter(es)
-  */
-
-  tcflush(fd_port, TCIOFLUSH);
-
-  if (tcsetattr(fd_port, TCSANOW, &newtio) == -1)
-  {
-    perror("tcsetattr");
-    exit(OTHER_ERROR);
-  }
-
-  return fd_port;
+  //LL open deve retornar identificador da ligacao de dados
+  return fd;
 }
 
-void alarm_handler(int signo)
+int llwrite(int fd, char * buffer, int length) 
 {
+  static unsigned int sequenceNumber = 0;
+  unsigned int num_bytes = 0;
 
+  DataStruct data = createMessage(sequenceNumber);
+
+  write(fd, )
+
+
+  sequenceNumber = (sequenceNumber + 1) % 2;
+  return num_bytes;
+}
+
+int llclose(int fd) {
+
+  if(close(fd)!=0){
+    perror("Erro a fechar a porta de serie:");
+  }
+
+  return 0;
+}
+
+void alarm_handler(int signo) {
   if (signo != SIGALRM)
   {
     printf("Handler nao executado\n");
     return;
   }
-  if (n_tries > 0)
-  {
+  if(n_tries>0){
     n_tries--;
+    sendBlock(FLAG_LL_OPEN_TRANSMITTER);
+    alarm(TIMEOUT);
+  }else{
+    llclose(porta);
   }
+
+
 
   return;
 }
 
-int sendBlock(const int flag, const int fd)
-{
+int sendBlock(int flag) {
 
-  unsigned char buf[BUF_SIZE + 1];
+  unsigned char buf[BUF_SIZE+1];
 
   //A Flag inicial e comum a qualquer trama
   if (flag == FLAG_LL_OPEN_RECEIVER || flag == FLAG_LL_OPEN_TRANSMITTER)
   {
     //E se usassemos esta funcao para depois enviarmos qualquer informacao que nao so LLOPEN?
     buf[FLAG_INDEX_BEGIN] = FLAG;
-    buf[A_INDEX] = A_CE_RR;
+    buf[A_INDEX] = A_EM;
 
     if (flag == FLAG_LL_OPEN_TRANSMITTER)
     {
@@ -111,8 +141,13 @@ int sendBlock(const int flag, const int fd)
     buf[BCC_INDEX] = buf[A_INDEX] ^ buf[C_INDEX];
 
     buf[FLAG_INDEX_END] = FLAG;
+    
 
-    int bytes_send = write(fd, buf, BUF_SIZE);
+    //Coloquei este \0 de proposito para ver se as vezes nao sera este o problema
+    buf[BUF_SIZE]='\0';
+    //
+  
+    int bytes_send = write(porta, buf, BUF_SIZE);
 
     if (bytes_send != BUF_SIZE)
     {
@@ -120,81 +155,28 @@ int sendBlock(const int flag, const int fd)
       return WRITE_FAIL;
     }
 
-  }
-
-  else if (flag == FLAG_LL_CLOSE_TRANSMITTER_DISC|| flag==FLAG_LL_CLOSE_TRANSMITTER_UA)
-  {
-
-    buf[FLAG_INDEX_BEGIN]=FLAG;
-    
-    buf[A_INDEX]=A_CE_RR;
-
-    if(FLAG_LL_CLOSE_RECEIVER_DISC){
-      buf[C_INDEX]=C_DISC;
-
-    }else if(FLAG_LL_CLOSE_RECEIVER_UA){
-      buf[C_INDEX]=C_UA;
-    }
-
-    buf[BCC_INDEX]=buf[A_INDEX]^buf[C_INDEX];
-
-    buf[FLAG_INDEX_END]=FLAG;
-  
-    if(write(fd,buf,BUF_SIZE)!=BUF_SIZE){
-      perror("Erro no write do FLAG_LL_CLOSE_TRANSMITTER_DISC:");
-      return WRITE_FAIL;
-    }
-
-  }
-
-   else if (flag == FLAG_LL_CLOSE_RECEIVER_DISC || flag==FLAG_LL_CLOSE_RECEIVER_UA)
-  {
-
-    buf[FLAG_INDEX_BEGIN]=FLAG;
-    
-    buf[A_INDEX]=A_CR_RE;
-
-    if(FLAG_LL_CLOSE_RECEIVER_DISC){
-      buf[C_INDEX]=C_DISC;
-
-    }else if(FLAG_LL_CLOSE_RECEIVER_UA){
-      buf[C_INDEX]=C_UA;
-    }
-
-    buf[BCC_INDEX]=buf[A_INDEX]^buf[C_INDEX];
-
-    buf[FLAG_INDEX_END]=FLAG;
-  
-    if(write(fd,buf,BUF_SIZE)!=BUF_SIZE){
-      perror("Erro no write do FLAG_LL_CLOSE_TRANSMITTER_DISC:");
-      return WRITE_FAIL;
-    }
-
+    return WRITE_SUCCESS;
   }
   else
   {
-
     printf("SEND BLOCK not implemented\n");
     return WRITE_FAIL;
   }
-
-   return WRITE_SUCCESS;
 }
 
-int readBlock(const int flag, const int fd)
-{
+int readBlock(int flag) {
 
   unsigned char leitura;
   unsigned int size = 0, state = ST_START;
 
-  if (flag == FLAG_LL_OPEN_RECEIVER || flag == FLAG_LL_OPEN_TRANSMITTER||flag==FLAG_LL_CLOSE_TRANSMITTER_DISC||flag==FLAG_LL_CLOSE_TRANSMITTER_UA||flag==FLAG_LL_CLOSE_RECEIVER_DISC||flag==FLAG_LL_CLOSE_RECEIVER_UA)
+  if (flag == FLAG_LL_OPEN_RECEIVER || flag == FLAG_LL_OPEN_TRANSMITTER)
   {
 
     for (size = 0; state != ST_STOP && size < MAX_BUF; size++)
     {
       //A mensagem vai ser lida byte a byte para garantir que nao há falha de informacao
 
-      if (!read(fd, &leitura, 1))
+      if (!read(porta, &leitura, 1))
       {
         if (errno == EINTR)
         {
@@ -204,30 +186,26 @@ int readBlock(const int flag, const int fd)
         perror("Failled to read");
         return READ_FAIL;
       }
-
       switch (state)
       {
-      case ST_START:
-      {
+      case ST_START:{
         //check FLAG byte
-        if (leitura == FLAG)
-        {
+        if (leitura == FLAG){
           state = ST_FLAG_RCV;
         }
       }
-      break;
+        break;
 
       case ST_FLAG_RCV:
 
         switch (leitura)
         {
-        case A_CE_RR:
-        {
+        case A_EM:{
           //Recebi uma mensagem do emissor ou um resposta do recetor
           state = ST_A_RCV;
           break;
         }
-
+    
         case FLAG:
           //Same state
 
@@ -243,37 +221,22 @@ int readBlock(const int flag, const int fd)
         {
         case C_UA:
 
-          if (flag == FLAG_LL_OPEN_TRANSMITTER||flag==FLAG_LL_CLOSE_RECEIVER_UA)
-          {
+          if (flag == FLAG_LL_OPEN_TRANSMITTER){
             //received C_SET and is Transmitter, go to state C received
-            //Or its llclose receiver a receiver
             state = ST_C_RCV;
             break;
+
           }
           else
             //received C_SET and is Receiver, go to state start
             state = ST_START;
-
+          
           break;
 
         case C_SET:
-
-          if (flag == FLAG_LL_OPEN_RECEIVER)
-          {
+          
+          if (flag == FLAG_LL_OPEN_RECEIVER){
             //received C_SET and is Receiver, go to state C received
-            state = ST_C_RCV;
-          }
-          else
-            //received C_SET and is Transmitter, go to state start
-            state = ST_START;
-          break;
-
-
-          case C_DISC:
-
-          if (flag == FLAG_LL_CLOSE_RECEIVER_DISC||flag==FLAG_LL_CLOSE_TRANSMITTER_DISC)
-          {
-            //received UA on LL_CLOSE
             state = ST_C_RCV;
           }
           else
@@ -293,50 +256,38 @@ int readBlock(const int flag, const int fd)
         }
         break;
 
-      case ST_C_RCV:
-      {
-
+      case ST_C_RCV:{
+        
         //received BCC, check BCC
-
-        if (leitura == (A_CE_RR ^ C_SET) && flag == FLAG_LL_OPEN_RECEIVER)
-        {
+                
+        if (leitura == (A_EM ^ C_SET)&&flag==FLAG_LL_OPEN_RECEIVER){
 
           //BCC correct
           state = ST_BCC_OK;
+
         }
-        else if (leitura == (A_CE_RR ^ C_UA) && flag == FLAG_LL_OPEN_TRANSMITTER)
-        {
+        else if(leitura == (A_EM ^ C_UA)&&flag==FLAG_LL_OPEN_TRANSMITTER){
           state = ST_BCC_OK;
         }
-        else if(leitura==(A_CE_RR^C_DISC)&&flag==FLAG_LL_CLOSE_RECEIVER_DISC){
-          state=ST_BCC_OK;
-        }
-        else if(leitura==(A_CR_RE^C_DISC)&&flag==FLAG_LL_CLOSE_TRANSMITTER_DISC){
-          state=ST_BCC_OK;
-        }
-
-        else if(leitura==(A_CE_RR^C_UA)&&flag==FLAG_LL_CLOSE_RECEIVER_UA){
-          state=ST_BCC_OK;
-        }
-        else if (leitura == FLAG)
-        {
-
+        else if (leitura == FLAG){
+          
           //Received FLAG
           state = ST_FLAG_RCV;
         }
-        else
-        {
+        else{
           //Received other
           state = ST_START;
+
         }
 
         break;
+
       }
+
 
       case ST_BCC_OK:
         //check FLAG byte
-        if (leitura == FLAG)
-        {
+        if (leitura == FLAG){
 
           //received all, stop cycle
           return READ_SUCCESS;
@@ -354,7 +305,6 @@ int readBlock(const int flag, const int fd)
     return READ_FAIL;
   }
 
-
   else
   {
     printf("Read block not implemented\n");
@@ -362,151 +312,74 @@ int readBlock(const int flag, const int fd)
   }
 }
 
-int llopen(int port_number, int flag)
-{
-  int fd;
+DataStruct createMessage(unsigned int sequenceNumber) {
+  
+  DataStruct data;
 
-  fd = openNonCanonical(port_number);
+  data.flag = FLAG;
+  data.fieldC = C(sequenceNumber);
+  data.fieldBCC1 = data.fieldA ^ data.fieldC;
+  data.fieldD = "AAFF1AAF1AAFF1AAFF1AAFF1AAFF1AAFF1AAFF1AAFF1AAFF1";
 
-  if (fd == UNKNOWN_PORT)
-  {
-    printf("Unknown port, must be either 0 or 1\n");
-    exit(UNKNOWN_PORT);
+  for(int i=0; i<BLOCK_SIZE; i++) {
+    data.fieldBCC2 =  data.fieldBCC2 ^ data.fieldD[i];
   }
 
-  //Transmitter
-  if (flag == FLAG_LL_OPEN_TRANSMITTER)
-  {
-    int ret_read_block = READ_FAIL;
-
-    if (signal(SIGALRM, alarm_handler) == SIG_ERR)
-    {
-      perror("Error instaling SIG ALARM handler\n");
-      return -1;
-    }
-
-    if (sendBlock(FLAG_LL_OPEN_TRANSMITTER, fd) != WRITE_SUCCESS)
-    {
-      printf("Error in sendSet function\n");
-    }
-
-    //Set alarm
-    alarm(TIMEOUT);
-
-    while (n_tries > 0)
-    {
-      ret_read_block = readBlock(FLAG_LL_OPEN_TRANSMITTER, fd);
-    }
-
-    if (ret_read_block == READ_FAIL)
-    {
-      printf("AS tentativas todas deram fail. Retornei erro\n");
-      return READ_FAIL;
-    }
-
-    if (signal(SIGALRM, SIG_IGN) == SIG_ERR)
-    {
-      perror("Error in ignoring SIG ALARM handler");
-    }
-  }
-
-  //Receiver
-  else if (flag == FLAG_LL_OPEN_RECEIVER)
-  {
-
-    if (readBlock(FLAG_LL_OPEN_RECEIVER, fd) != READ_SUCCESS)
-    {
-      perror("Error in reading from llopen:");
-      return -1;
-    }
-
-    if (sendBlock(FLAG_LL_OPEN_RECEIVER, fd) != WRITE_SUCCESS)
-    {
-      perror("Error in writing from llopen:");
-      return -1;
-    }
-  }
-
-  //LL open deve retornar identificador da ligacao de dados
-  return fd;
+  data.fieldBCC2 = BBC2Stufying(data.fieldBCC2);
+  data.fieldD = dataStuffing(data.fieldD);
+  
+  return data;
 }
 
-int llclose(int fd, int flag)
-{
+unsigned char BBC2Stufying (unsigned char BBC2) { 
+  
+  unsigned char* stuffedBBC2 = (unsigned char*)malloc(sizeof(unsigned char));
 
-  if (flag == FLAG_LL_CLOSE_TRANSMITTER_DISC)
-  {
-    n_tries=MAX_RETR;
-
-    if (sendBlock(flag, FLAG_LL_CLOSE_TRANSMITTER_DISC) != WRITE_SUCCESS)
-    {
-      printf("Erro a enviar FLAG_LL_CLOSE_TRANSMITTER_DISC\n");
-      return -1;
-    }
-
-    alarm(TIMEOUT);
-
-    if(readBlock(flag,FLAG_LL_CLOSE_TRANSMITTER_DISC)!=READ_SUCCESS){
-      printf("Erro a enviar FLAG_LL_CLOSE_TRANSMITTER_UA\n");
-      return -1;
-
-    }
-
-    if (sendBlock(flag, FLAG_LL_CLOSE_TRANSMITTER_UA) != WRITE_SUCCESS)
-    {
-      printf("Erro a enviar FLAG_LL_CLOSE_TRANSMITTER_UA\n");
-      return -1;
-    }
-
+  if(BBC2== FLAG) {
+    stuffedBBC2 = (unsigned char *) realloc(stuffedBBC2, 2*sizeof(unsigned char));
+    stuffedBBC2[0] = ESC;
+    stuffedBBC2[1] = ESC_FLAG;
   }
-  else if (flag == FLAG_LL_CLOSE_RECEIVER_DISC)
-  {
+
+  else if(BBC2 == ESC) {
+    stuffedBBC2 = (unsigned char *) realloc(stuffedBBC2, 2*sizeof(unsigned char));
+    stuffedBBC2[0] = ESC;
+    stuffedBBC2[1] = ESC_ESC;
+  }
+
+  else {
+    stuffedBBC2 = BBC2;
+  }
+
+  return stuffedBBC2;
+}
+
+unsigned char* dataStuffing (unsigned char* data) { 
+  
+  unsigned char* buffer = (unsigned char *) malloc(MAX_BUF);
+  int maxSize = MAX_BUF;
+  int pos = 0;
+
+  for (int i = 0; data[i]!= NULL; i++) {
+    if(i > maxSize)
+      buffer = (char *) realloc(buffer, i + pos);
     
-    n_tries=MAX_RETR;
+    buffer[i] = data[i];
 
-
-    if(signal(SIGALRM,alarm_handler)<0){
-      perror("Erro a instalar o handler no LL_CLOSE, no receiver");
+    if(buffer[i] == FLAG) {
+      buffer[i] = ESC;
+      pos++;
+      buffer = (unsigned char *) realloc(buffer, i + pos);
+      buffer[i+1] = ESC_FLAG;
     }
 
-    if(readBlock(flag,FLAG_LL_CLOSE_RECEIVER_DISC)!=READ_SUCCESS){
-      printf("Erro a enviar FLAG_LL_CLOSE_TRANSMITTER_UA\n");
-      return -1;
-
+    else if(buffer[i] == ESC) {
+      buffer[i] = ESC;
+      pos++;
+      buffer = (unsigned char *) realloc(buffer, i + pos);
+      buffer[i+1] = ESC_ESC;
     }
-
-    if (sendBlock(flag, FLAG_LL_CLOSE_RECEIVER_DISC) != WRITE_SUCCESS)
-    {
-      printf("Erro a enviar FLAG_LL_CLOSE_TRANSMITTER_DISC\n");
-      return -1;
-    }
-
-    alarm(TIMEOUT);
-
-
-     if(readBlock(flag,FLAG_LL_CLOSE_RECEIVER_UA)!=READ_SUCCESS){
-      printf("Erro a enviar FLAG_LL_CLOSE_TRANSMITTER_UA\n");
-      return -1;
-    }
-
-  }
-  else
-  {
-
-    printf("ERRO EM LLCLOSE");
-    return OTHER_ERROR;
   }
 
-  if (tcsetattr(fd, TCSANOW, &oldtio) == -1)
-  {
-    perror("tcsetattr");
-    exit(-1);
-  }
-
-  if (close(fd) != 0)
-  {
-    perror("Failled to close file");
-  }
-
-  return 0;
+  return buffer;
 }
