@@ -56,7 +56,10 @@ int main(int argc, char** argv)
   */
     sleep(1);
 
-    llclose(fd,FLAG_LL_CLOSE_RECEIVER_DISC);
+    if(llclose(fd,FLAG_LL_CLOSE_RECEIVER_DISC)!=LL_CLOSE_SUCESS){
+      printf("O LL close retornou erro\n");
+      return -1;
+    }
     
     return 0;
 }

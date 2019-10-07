@@ -51,6 +51,8 @@
 #define WRITE_SUCCESS 0
 #define WRITE_FAIL 1
 #define NO_MEM -2
+#define LL_CLOSE_SUCESS 1
+#define LL_CLOSE_FAIL -1
 
 //State machine flags
 #define ST_START 0

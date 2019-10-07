@@ -97,7 +97,7 @@ int sendBlock(const int flag, const int fd)
   {
     //E se usassemos esta funcao para depois enviarmos qualquer informacao que nao so LLOPEN?
     buf[FLAG_INDEX_BEGIN] = FLAG;
-    buf[A_INDEX] = A_CE_RR;
+    buf[A_INDEX] = A_CE_AR;
 
     if (flag == FLAG_LL_OPEN_TRANSMITTER)
     {
@@ -127,7 +127,7 @@ int sendBlock(const int flag, const int fd)
 
     buf[FLAG_INDEX_BEGIN]=FLAG;
     
-    buf[A_INDEX]=A_CE_RR;
+    buf[A_INDEX]=A_CE_AR;
 
     if(FLAG_LL_CLOSE_RECEIVER_DISC){
       buf[C_INDEX]=C_DISC;
@@ -152,7 +152,7 @@ int sendBlock(const int flag, const int fd)
 
     buf[FLAG_INDEX_BEGIN]=FLAG;
     
-    buf[A_INDEX]=A_CR_RE;
+    buf[A_INDEX]=A_CR_AE;
 
     if(FLAG_LL_CLOSE_RECEIVER_DISC){
       buf[C_INDEX]=C_DISC;
@@ -221,7 +221,7 @@ int readBlock(const int flag, const int fd)
 
         switch (leitura)
         {
-        case A_CE_RR:
+        case A_CE_AR:
         {
           //Recebi uma mensagem do emissor ou um resposta do recetor
           state = ST_A_RCV;
@@ -298,24 +298,24 @@ int readBlock(const int flag, const int fd)
 
         //received BCC, check BCC
 
-        if (leitura == (A_CE_RR ^ C_SET) && flag == FLAG_LL_OPEN_RECEIVER)
+        if (leitura == (A_CE_AR ^ C_SET) && flag == FLAG_LL_OPEN_RECEIVER)
         {
 
           //BCC correct
           state = ST_BCC_OK;
         }
-        else if (leitura == (A_CE_RR ^ C_UA) && flag == FLAG_LL_OPEN_TRANSMITTER)
+        else if (leitura == (A_CE_AR ^ C_UA) && flag == FLAG_LL_OPEN_TRANSMITTER)
         {
           state = ST_BCC_OK;
         }
-        else if(leitura==(A_CE_RR^C_DISC)&&flag==FLAG_LL_CLOSE_RECEIVER_DISC){
+        else if(leitura==(A_CE_AR^C_DISC)&&flag==FLAG_LL_CLOSE_RECEIVER_DISC){
           state=ST_BCC_OK;
         }
-        else if(leitura==(A_CR_RE^C_DISC)&&flag==FLAG_LL_CLOSE_TRANSMITTER_DISC){
+        else if(leitura==(A_CR_AE^C_DISC)&&flag==FLAG_LL_CLOSE_TRANSMITTER_DISC){
           state=ST_BCC_OK;
         }
 
-        else if(leitura==(A_CE_RR^C_UA)&&flag==FLAG_LL_CLOSE_RECEIVER_UA){
+        else if(leitura==(A_CE_AR^C_UA)&&flag==FLAG_LL_CLOSE_RECEIVER_UA){
           state=ST_BCC_OK;
         }
         else if (leitura == FLAG)
@@ -441,21 +441,21 @@ int llclose(int fd, int flag)
     if (sendBlock(flag, FLAG_LL_CLOSE_TRANSMITTER_DISC) != WRITE_SUCCESS)
     {
       printf("Erro a enviar FLAG_LL_CLOSE_TRANSMITTER_DISC\n");
-      return -1;
+     return LL_CLOSE_FAIL;
     }
 
     alarm(TIMEOUT);
 
     if(readBlock(flag,FLAG_LL_CLOSE_TRANSMITTER_DISC)!=READ_SUCCESS){
       printf("Erro a enviar FLAG_LL_CLOSE_TRANSMITTER_UA\n");
-      return -1;
+     return LL_CLOSE_FAIL;
 
     }
 
     if (sendBlock(flag, FLAG_LL_CLOSE_TRANSMITTER_UA) != WRITE_SUCCESS)
     {
       printf("Erro a enviar FLAG_LL_CLOSE_TRANSMITTER_UA\n");
-      return -1;
+     return LL_CLOSE_FAIL;
     }
 
   }
@@ -467,18 +467,19 @@ int llclose(int fd, int flag)
 
     if(signal(SIGALRM,alarm_handler)<0){
       perror("Erro a instalar o handler no LL_CLOSE, no receiver");
+      return LL_CLOSE_FAIL;
     }
 
     if(readBlock(flag,FLAG_LL_CLOSE_RECEIVER_DISC)!=READ_SUCCESS){
       printf("Erro a enviar FLAG_LL_CLOSE_TRANSMITTER_UA\n");
-      return -1;
+     return LL_CLOSE_FAIL;
 
     }
 
     if (sendBlock(flag, FLAG_LL_CLOSE_RECEIVER_DISC) != WRITE_SUCCESS)
     {
       printf("Erro a enviar FLAG_LL_CLOSE_TRANSMITTER_DISC\n");
-      return -1;
+     return LL_CLOSE_FAIL;
     }
 
     alarm(TIMEOUT);
@@ -486,15 +487,14 @@ int llclose(int fd, int flag)
 
      if(readBlock(flag,FLAG_LL_CLOSE_RECEIVER_UA)!=READ_SUCCESS){
       printf("Erro a enviar FLAG_LL_CLOSE_TRANSMITTER_UA\n");
-      return -1;
+      return LL_CLOSE_FAIL;
     }
 
   }
   else
   {
-
     printf("ERRO EM LLCLOSE");
-    return OTHER_ERROR;
+    return LL_CLOSE_FAIL;
   }
 
   if (tcsetattr(fd, TCSANOW, &oldtio) == -1)
@@ -506,7 +506,8 @@ int llclose(int fd, int flag)
   if (close(fd) != 0)
   {
     perror("Failled to close file");
+    return LL_CLOSE_FAIL;
   }
 
-  return 0;
+  return LL_CLOSE_SUCESS;
 }
