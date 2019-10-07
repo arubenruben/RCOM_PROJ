@@ -670,7 +670,7 @@ DataStruct createMessage(unsigned int sequenceNumber, char* buffer, int length) 
   data.flag = FLAG;
   data.fieldC = C(sequenceNumber);
   data.fieldBCC1 = data.fieldA ^ data.fieldC;
-  *(data.fieldBCC2) = data.fieldBCC1;
+  *(data.fieldBCC2) = buffer[0];
 
   for(int i = 0; i < length; i++) {
     *(data.fieldBCC2) =  *(data.fieldBCC2) ^ data.fieldD[i];
