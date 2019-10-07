@@ -1,10 +1,17 @@
 #pragma once
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <termios.h>
+#include <string.h>
+#include <fcntl.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <unistd.h>
 #include <signal.h>
 #include <errno.h>
+
 #include "flags.h"
 
 
