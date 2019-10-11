@@ -48,7 +48,7 @@ int main(int argc, char** argv)
 
     printf("Fiz llopen. Atingi sleep\n");
 
-    sleep(10);
+    sleep(1);
 
     if(llclose(fd,FLAG_LL_CLOSE_RECEIVER_DISC)!=LL_CLOSE_SUCESS){
       printf("O LL close retornou erro\n");

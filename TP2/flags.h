@@ -9,6 +9,7 @@
 #define TRUE 1
 #define UNKNOWN_PORT -1
 #define OTHER_ERROR -2
+#define LER_BYTE_A_BYTE 1
 
 
 #define FLAG_LL_OPEN_TRANSMITTER 1
@@ -18,6 +19,7 @@
 #define FLAG_LL_CLOSE_TRANSMITTER_UA 2
 #define FLAG_LL_CLOSE_RECEIVER_DISC 3
 #define FLAG_LL_CLOSE_RECEIVER_UA 4
+#define FLAG_HANDLER_CALL 5
 
 //5 Byte message
 #define FLAG_INDEX_BEGIN 0
@@ -67,3 +69,7 @@
 #define ST_D 4
 #define ST_ESC_RCV 5
 #define ST_STOP 6
+
+#define HANDLING_CLOSE_EMISSOR 0
+#define HANDLING_CLOSE_RECETOR 1
+#define HANDLING_UNDEFINED -1;

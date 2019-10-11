@@ -3,13 +3,15 @@
 #define MAX_RETR 3
 #define TIMEOUT 3
 
-static struct termios oldtio;
-static int n_tries = MAX_RETR;
-static bool retransmission_active = true;
+void alarm_handler_set_signal(int signo);
+static int fd_for_handler;
+static int type_handling=HANDLING_UNDEFINED;
 
-void alarm_handler(int signo);
 int sendBlock(const int flag, const int fd);
 int readBlock(const int flag, const int fd);
+
+static struct termios oldtio;
+static int n_tries = MAX_RETR;
 
 DataStruct createMessage(unsigned int sequenceNumber, char *buffer, int length);
 unsigned int BBC2Stufying(unsigned char *BBC2);
@@ -53,8 +55,8 @@ int openNonCanonical(int port_number)
   /* set input mode (non-canonical, no echo,...) */
   newtio.c_lflag = 0;
 
-  newtio.c_cc[VTIME] = 0; /* inter-character timer unused */
-  newtio.c_cc[VMIN] = 0;  /* blocking read until 1 char received */
+  newtio.c_cc[VTIME] = 0;              /* inter-character timer unused */
+  newtio.c_cc[VMIN] = LER_BYTE_A_BYTE; /* blocking read until 1 char received */
 
   /*
     VTIME e VMIN devem ser alterados de forma a proteger com um temporizador a
@@ -72,9 +74,11 @@ int openNonCanonical(int port_number)
   return fd_port;
 }
 
-void alarm_handler(int signo)
+void alarm_handler_set_signal(int signo)
 {
+
   printf("Alarme chamado\n");
+
   if (signo != SIGALRM)
   {
     printf("Handler nao executado\n");
@@ -82,8 +86,60 @@ void alarm_handler(int signo)
   }
   if (n_tries > 0)
   {
-    retransmission_active = true;
+    if (sendBlock(FLAG_LL_OPEN_TRANSMITTER, fd_for_handler) != WRITE_SUCCESS)
+    {
+      printf("Error in sendSet function no handler\n");
+    }
+    alarm(TIMEOUT);
     n_tries--;
+  }
+  else
+  {
+    //printf("Handler chama llclose.TIMEOUT TOTAL\n");
+    llclose(fd_for_handler, FLAG_HANDLER_CALL);
+    exit(-1);
+  }
+
+  return;
+}
+
+void alarm_handler_disc_signal(int signo)
+{
+
+  printf("Handling do ll_close_chamado\n");
+
+  if (signo != SIGALRM)
+  {
+    printf("Handler nao executado\n");
+    return;
+  }
+  
+  if (n_tries > 0)
+  {
+    if(type_handling==HANDLING_CLOSE_EMISSOR){
+      if (sendBlock(FLAG_LL_CLOSE_TRANSMITTER_DISC,fd_for_handler) != WRITE_SUCCESS)
+      {
+        printf("Error in sendSet function no handler\n");
+      }
+
+    }else if(type_handling==HANDLING_CLOSE_RECETOR){
+
+      if (sendBlock(FLAG_LL_CLOSE_RECEIVER_DISC,fd_for_handler) != WRITE_SUCCESS)
+      {
+        printf("Error in sendSet function no handler\n");
+      }
+    }else{
+      printf("Handling undefined. STOP\n");
+      exit(-1);
+    }
+
+    alarm(TIMEOUT);
+    n_tries--;
+  }
+  else
+  {
+    printf("No LLCLOSE fui incapaz de desligar corretamente\nMatei o processo\n");
+    exit(-1);
   }
 
   return;
@@ -242,8 +298,9 @@ int readBlock(const int flag, const int fd)
     {
       //A mensagem vai ser lida byte a byte para garantir que nao há falha de informacao
 
-      if (!read(fd, &leitura, 1))
+      if ((read(fd, &leitura, 1) != 0))
       {
+       
       }
 
       switch (state)
@@ -408,7 +465,9 @@ int llopen(int port_number, int flag)
   int fd;
 
   fd = openNonCanonical(port_number);
+  fd_for_handler=fd;
   int ret_read_block = READ_FAIL;
+  n_tries=MAX_RETR;
 
   if (fd == UNKNOWN_PORT)
   {
@@ -420,25 +479,21 @@ int llopen(int port_number, int flag)
   if (flag == FLAG_LL_OPEN_TRANSMITTER)
   {
 
-    if (signal(SIGALRM, alarm_handler) == SIG_ERR)
+    if (signal(SIGALRM, alarm_handler_set_signal) == SIG_ERR)
     {
       perror("Error instaling SIG ALARM handler\n");
       return -1;
     }
 
-    while (n_tries > 0 && ret_read_block == READ_FAIL)
+    if (sendBlock(FLAG_LL_OPEN_TRANSMITTER, fd) != WRITE_SUCCESS)
     {
-      if (retransmission_active == true)
-      {
-        if (sendBlock(FLAG_LL_OPEN_TRANSMITTER, fd) != WRITE_SUCCESS)
-        {
-          printf("Error in sendSet function\n");
-        }
-        retransmission_active = false;
+      printf("Error in sendSet function\n");
+    }
 
-        //Set alarm
-        alarm(TIMEOUT);
-      }
+    alarm(TIMEOUT);
+
+    while (ret_read_block == READ_FAIL)
+    {
       ret_read_block = readBlock(FLAG_LL_OPEN_TRANSMITTER, fd);
     }
 
@@ -458,10 +513,14 @@ int llopen(int port_number, int flag)
   else if (flag == FLAG_LL_OPEN_RECEIVER)
   {
 
-    if (readBlock(FLAG_LL_OPEN_RECEIVER, fd) != READ_SUCCESS)
+    while (1)
     {
-      perror("Error in reading from llopen:");
-      return -1;
+
+      if (readBlock(FLAG_LL_OPEN_RECEIVER, fd) != READ_SUCCESS)
+      {
+        //perror("Error in reading from llopen:");
+        //return -1;
+      }
     }
 
     if (sendBlock(FLAG_LL_OPEN_RECEIVER, fd) != WRITE_SUCCESS)
@@ -474,7 +533,7 @@ int llopen(int port_number, int flag)
   //LL open deve retornar identificador da ligacao de dados
   return fd;
 }
-
+/*
 int llwrite(int fd, char *buffer, int length)
 {
 
@@ -527,7 +586,9 @@ int llwrite(int fd, char *buffer, int length)
 
   return (dataStufSize + 5);
 }
+*/
 
+/*
 int llread(int fd, char *buffer)
 {
   static unsigned int r = 0;
@@ -699,7 +760,7 @@ int llread(int fd, char *buffer)
 
   return size_buffer - 1;
 }
-
+*/
 DataStruct createMessage(unsigned int sequenceNumber, char *buffer, int length)
 {
 
@@ -780,26 +841,28 @@ int llclose(int fd, int flag)
   int read_bloc_ret = READ_FAIL;
   n_tries = MAX_RETR;
 
+  
   //Transmitter side
   if (flag == FLAG_LL_CLOSE_TRANSMITTER_DISC)
-  {
-
-    while (n_tries > 0 && read_bloc_ret == READ_FAIL)
+  {    
+    if (signal(SIGALRM, alarm_handler_disc_signal) < 0)
     {
+      perror("Erro a instalar o handler no LL_CLOSE, no receiver");
+    }
 
-      if (retransmission_active == true)
-      {
-
-        if (sendBlock(flag, FLAG_LL_CLOSE_TRANSMITTER_DISC) != WRITE_SUCCESS)
-        {
-          printf("Erro a enviar FLAG_LL_CLOSE_TRANSMITTER_DISC\n");
-          return -1;
-        }
-
-        alarm(TIMEOUT);
-        retransmission_active=false;
-      }
-
+    if (sendBlock(flag, FLAG_LL_CLOSE_TRANSMITTER_DISC) != WRITE_SUCCESS)
+    {
+      printf("Erro a enviar FLAG_LL_CLOSE_TRANSMITTER_DISC\n");
+      return -1;
+    }
+    
+    
+    type_handling=HANDLING_CLOSE_EMISSOR;
+    
+    alarm(TIMEOUT);
+     
+    while (read_bloc_ret == READ_FAIL)
+    {
       read_bloc_ret = readBlock(flag, FLAG_LL_CLOSE_TRANSMITTER_DISC);
     }
 
@@ -809,6 +872,8 @@ int llclose(int fd, int flag)
       return -1;
     }
 
+    printf("Tou aqui\n");
+    
     if (signal(SIGALRM, SIG_IGN) == SIG_ERR)
     {
       perror("Error in ignoring SIG ALARM handler");
@@ -825,7 +890,7 @@ int llclose(int fd, int flag)
   else if (flag == FLAG_LL_CLOSE_RECEIVER_DISC)
   {
 
-    if (signal(SIGALRM, alarm_handler) < 0)
+    if (signal(SIGALRM, alarm_handler_disc_signal) < 0)
     {
       perror("Erro a instalar o handler no LL_CLOSE, no receiver");
     }
@@ -833,24 +898,19 @@ int llclose(int fd, int flag)
     if (readBlock(flag, FLAG_LL_CLOSE_RECEIVER_DISC) != READ_SUCCESS)
     {
       printf("Erro a receber FLAG_LL_CLOSE_TRANSMITTER_DISC\n");
+      return READ_FAIL;
+    }
+
+    if (sendBlock(flag, FLAG_LL_CLOSE_RECEIVER_DISC) != WRITE_SUCCESS)
+    {
+      printf("Erro a enviar FLAG_LL_CLOSE_TRANSMITTER_DISC\n");
       return -1;
     }
+    type_handling=HANDLING_CLOSE_RECETOR;
+    alarm(TIMEOUT);
 
     while (n_tries > 0 && read_bloc_ret == READ_FAIL)
     {
-
-      if (retransmission_active == true)
-      {
-        if (sendBlock(flag, FLAG_LL_CLOSE_RECEIVER_DISC) != WRITE_SUCCESS)
-        {
-          printf("Erro a enviar FLAG_LL_CLOSE_TRANSMITTER_DISC\n");
-          return -1;
-        }
-
-        alarm(TIMEOUT);
-        retransmission_active=false;
-      }
-
       read_bloc_ret = readBlock(flag, FLAG_LL_CLOSE_TRANSMITTER_DISC);
     }
 
@@ -859,6 +919,9 @@ int llclose(int fd, int flag)
       printf("O llclose no transmitter dei timeout sem resposta valida\n");
       return -1;
     }
+  }
+  else if(flag==FLAG_HANDLER_CALL){
+    
   }
   else
   {
