@@ -50,13 +50,12 @@ int main(int argc, char** argv)
     }
 
 
-    sleep(1); //Resolve bug de receber lixo
+    sleep(3); //Resolve bug de receber lixo
 
 
-    if(llclose(fd,FLAG_LL_CLOSE_RECEIVER_DISC)!=0){
+    if(llclose(fd,FLAG_LL_CLOSE_RECEIVER_DISC)!=LL_CLOSE_SUCESS){
       printf("Erro no llclose\n");
       return -1;
-
     }
 
 

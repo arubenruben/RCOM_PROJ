@@ -48,7 +48,7 @@ int main(int argc, char** argv)
       return -1;
     }
 
-    sleep(1);
+    sleep(3);
 
     if(llclose(fd,FLAG_LL_CLOSE_TRANSMITTER_DISC)!=LL_CLOSE_SUCESS){
       printf("O LL close retornou erro\n");
