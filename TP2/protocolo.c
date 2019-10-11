@@ -165,7 +165,7 @@ int sendBlock(const int flag, const int fd)
   {
 
     buf[FLAG_INDEX_BEGIN]=FLAG;
-    
+
     buf[A_INDEX]=A_CE_AR;
 
     if(FLAG_LL_CLOSE_RECEIVER_DISC){
@@ -178,7 +178,7 @@ int sendBlock(const int flag, const int fd)
     buf[BCC_INDEX]=buf[A_INDEX]^buf[C_INDEX];
 
     buf[FLAG_INDEX_END]=FLAG;
-  
+
     if(write(fd,buf,BUF_SIZE)!=BUF_SIZE){
       perror("Erro no write do FLAG_LL_CLOSE_TRANSMITTER_DISC:");
       return WRITE_FAIL;
@@ -190,7 +190,7 @@ int sendBlock(const int flag, const int fd)
   {
 
     buf[FLAG_INDEX_BEGIN]=FLAG;
-    
+
     buf[A_INDEX]=A_CR_AE;
 
     if(FLAG_LL_CLOSE_RECEIVER_DISC){
@@ -203,7 +203,7 @@ int sendBlock(const int flag, const int fd)
     buf[BCC_INDEX]=buf[A_INDEX]^buf[C_INDEX];
 
     buf[FLAG_INDEX_END]=FLAG;
-  
+
     if(write(fd,buf,BUF_SIZE)!=BUF_SIZE){
       perror("Erro no write do FLAG_LL_CLOSE_TRANSMITTER_DISC:");
       return WRITE_FAIL;
@@ -432,7 +432,7 @@ int llopen(int port_number, int flag)
     //Set alarm
     alarm(TIMEOUT);
 
-    while (n_tries > 0)
+    while (n_tries > 0&&ret_read_block==READ_FAIL)
     {
       ret_read_block = readBlock(FLAG_LL_OPEN_TRANSMITTER, fd);
     }
@@ -494,16 +494,16 @@ int llwrite(int fd, char * buffer, int length)  {
 
     //REJ Cycle
     while(answer != correctAnswer) {
-        
+
       if((num_bytes = write(fd, &data.fieldD, dataStufSize*sizeof(unsigned char))) != dataStufSize)
         return -1;
-      
+
       if((num_bytes = write(fd, &data.fieldBCC2, sizeof(unsigned char))) != 1)
         return -1;
 
       if((num_bytes = write(fd, &data.flag, sizeof(unsigned char))) != 1)
         return -1;
-  
+
       alarm(TIMEOUT);
 
       read(fd, &answer, 1);
@@ -516,7 +516,7 @@ int llwrite(int fd, char * buffer, int length)  {
   free(data.fieldBCC2);
 
   sequenceNumber = (sequenceNumber + 1) % 2;
-  
+
   return (dataStufSize + 5);
 }
 
@@ -674,7 +674,7 @@ int llread(int fd, char *buffer){
 }
 
 DataStruct createMessage(unsigned int sequenceNumber, char* buffer, int length) {
-    
+
   DataStruct data;
   data.flag = FLAG;
   data.fieldC = C(sequenceNumber);
@@ -691,11 +691,11 @@ DataStruct createMessage(unsigned int sequenceNumber, char* buffer, int length) 
 
   data.bcc2StufSize = BBC2Stufying(data.fieldBCC2);
   data.dataStufSize = dataStuffing(buffer, length, data.fieldD);
-  
+
   return data;
 }
 
-unsigned int BBC2Stufying (unsigned char *BBC2) { 
+unsigned int BBC2Stufying (unsigned char *BBC2) {
   unsigned int size = 1;
 
   if(*BBC2 == FLAG) {
@@ -713,12 +713,12 @@ unsigned int BBC2Stufying (unsigned char *BBC2) {
   return size;
 }
 
-unsigned int dataStuffing (unsigned char* data, int length, unsigned char *fieldD) { 
-  
+unsigned int dataStuffing (unsigned char* data, int length, unsigned char *fieldD) {
+
   unsigned int pos = 0;
 
   for (int i = 0; i < length; i++) {
-    
+
     data[i + pos] = data[i];
 
     if(data[i] == FLAG) {
@@ -741,10 +741,12 @@ unsigned int dataStuffing (unsigned char* data, int length, unsigned char *field
 
 int llclose(int fd, int flag)
 {
+  int read_bloc_ret=READ_FAIL;
+  n_tries=MAX_RETR;
 
+  //Transmitter side
   if (flag == FLAG_LL_CLOSE_TRANSMITTER_DISC)
   {
-    n_tries=MAX_RETR;
 
     if (sendBlock(flag, FLAG_LL_CLOSE_TRANSMITTER_DISC) != WRITE_SUCCESS)
     {
@@ -754,11 +756,23 @@ int llclose(int fd, int flag)
 
     alarm(TIMEOUT);
 
-    if(readBlock(flag,FLAG_LL_CLOSE_TRANSMITTER_DISC)!=READ_SUCCESS){
-      printf("Erro a enviar FLAG_LL_CLOSE_TRANSMITTER_UA\n");
-      return -1;
+
+    while(n_tries>0&&read_bloc_ret==READ_FAIL){
+
+      read_bloc_ret=readBlock(flag,FLAG_LL_CLOSE_TRANSMITTER_DISC);
 
     }
+
+    if(read_bloc_ret==READ_FAIL){
+      printf("O llclose no transmitter dei timeout sem resposta valida\n");
+      return -1;
+    }
+
+    if (signal(SIGALRM, SIG_IGN) == SIG_ERR)
+    {
+      perror("Error in ignoring SIG ALARM handler");
+    }
+
 
     if (sendBlock(flag, FLAG_LL_CLOSE_TRANSMITTER_UA) != WRITE_SUCCESS)
     {
@@ -767,15 +781,15 @@ int llclose(int fd, int flag)
     }
 
   }
+
+  //Receiver block
   else if (flag == FLAG_LL_CLOSE_RECEIVER_DISC)
   {
-    
-    n_tries=MAX_RETR;
-
 
     if(signal(SIGALRM,alarm_handler)<0){
       perror("Erro a instalar o handler no LL_CLOSE, no receiver");
     }
+
 
     if(readBlock(flag,FLAG_LL_CLOSE_RECEIVER_DISC)!=READ_SUCCESS){
       printf("Erro a enviar FLAG_LL_CLOSE_TRANSMITTER_UA\n");
@@ -792,15 +806,19 @@ int llclose(int fd, int flag)
     alarm(TIMEOUT);
 
 
-     if(readBlock(flag,FLAG_LL_CLOSE_RECEIVER_UA)!=READ_SUCCESS){
-      printf("Erro a enviar FLAG_LL_CLOSE_TRANSMITTER_UA\n");
-      return -1;
+    while(n_tries>0&&read_bloc_ret==READ_FAIL){
+
+      read_bloc_ret=readBlock(flag,FLAG_LL_CLOSE_RECEIVER_UA);
+
     }
 
+    if(read_bloc_ret==READ_FAIL){
+      printf("O llclose no transmitter dei timeout sem resposta valida\n");
+      return -1;
+    }
   }
   else
   {
-
     printf("ERRO EM LLCLOSE");
     return OTHER_ERROR;
   }
@@ -811,10 +829,13 @@ int llclose(int fd, int flag)
     exit(-1);
   }
 
+
   if (close(fd) != 0)
   {
     perror("Failled to close file");
   }
+
+  printf("LLCLOSE DONE\n");
 
   return 0;
 }
