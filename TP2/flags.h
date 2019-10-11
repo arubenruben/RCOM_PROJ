@@ -4,6 +4,7 @@
 #define BAUDRATE B38400
 #define MODEMDEVICE_0 "/dev/ttyS0"
 #define MODEMDEVICE_1 "/dev/ttyS1"
+#define MODEMDEVICE_2 "/dev/ttyS2"
 #define _POSIX_SOURCE 1 /* POSIX compliant source */
 #define FALSE 0
 #define TRUE 1

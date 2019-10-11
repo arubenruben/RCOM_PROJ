@@ -31,6 +31,9 @@ int openNonCanonical(int port_number)
   case 1:
     fd_port = open(MODEMDEVICE_1, O_RDWR | O_NOCTTY);
     break;
+  case 2:
+    fd_port = open(MODEMDEVICE_2, O_RDWR | O_NOCTTY);
+  break;
   default:
     return UNKNOWN_PORT;
   }
@@ -300,7 +303,7 @@ int readBlock(const int flag, const int fd)
 
       if ((read(fd, &leitura, 1) != 0))
       {
-       
+       printf("%x\n",leitura);
       }
 
       switch (state)
@@ -513,14 +516,10 @@ int llopen(int port_number, int flag)
   else if (flag == FLAG_LL_OPEN_RECEIVER)
   {
 
-    while (1)
+    if (readBlock(FLAG_LL_OPEN_RECEIVER, fd) != READ_SUCCESS)
     {
-
-      if (readBlock(FLAG_LL_OPEN_RECEIVER, fd) != READ_SUCCESS)
-      {
-        //perror("Error in reading from llopen:");
-        //return -1;
-      }
+      perror("Error in reading from llopen:");
+      return -1;
     }
 
     if (sendBlock(FLAG_LL_OPEN_RECEIVER, fd) != WRITE_SUCCESS)
@@ -907,9 +906,10 @@ int llclose(int fd, int flag)
       return -1;
     }
     type_handling=HANDLING_CLOSE_RECETOR;
+
     alarm(TIMEOUT);
 
-    while (n_tries > 0 && read_bloc_ret == READ_FAIL)
+    while (read_bloc_ret == READ_FAIL)
     {
       read_bloc_ret = readBlock(flag, FLAG_LL_CLOSE_TRANSMITTER_DISC);
     }

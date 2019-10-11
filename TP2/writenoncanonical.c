@@ -28,7 +28,7 @@ int main(int argc, char** argv)
 
     if ( (argc < 2) ||
   	     ((strcmp("/dev/ttyS0", argv[1])!=0) &&
-  	      (strcmp(MODEMDEVICE, argv[1])!=0) )) {
+  	      (strcmp(MODEMDEVICE, argv[1])!=0)&&(strcmp(MODEMDEVICE_2, argv[1])!=0) )) {
       printf("Usage:\tnserial SerialPort\n\tex: nserial /dev/ttyS1\n");
       exit(1);
     }
@@ -36,9 +36,11 @@ int main(int argc, char** argv)
     if(strcmp("/dev/ttyS0", argv[1])==0){
       porta=0;
 
-    }else if(strcmp(MODEMDEVICE, argv[1])==0){
+    }else if(strcmp(MODEMDEVICE_1, argv[1])==0){
 
       porta=1;
+    }else{
+      porta=2;
     }
 
     if( (fd = llopen(porta,FLAG_LL_OPEN_TRANSMITTER)) < 0){
@@ -46,11 +48,9 @@ int main(int argc, char** argv)
       return -1;
     }
 
-    printf("Fiz llopen. Atingi sleep\n");
-
     sleep(1);
 
-    if(llclose(fd,FLAG_LL_CLOSE_RECEIVER_DISC)!=LL_CLOSE_SUCESS){
+    if(llclose(fd,FLAG_LL_CLOSE_TRANSMITTER_DISC)!=LL_CLOSE_SUCESS){
       printf("O LL close retornou erro\n");
       return -1;
     }

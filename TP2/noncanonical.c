@@ -28,7 +28,8 @@ int main(int argc, char** argv)
 
     if ( (argc < 2) ||
   	     ((strcmp("/dev/ttyS0", argv[1])!=0) &&
-  	      (strcmp("/dev/ttyS1", argv[1])!=0) )) {
+  	      (strcmp("/dev/ttyS1", argv[1])!=0)&&
+  	      (strcmp("/dev/ttyS2", argv[1])!=0) )) {
       printf("Usage:\tnserial SerialPort\n\tex: nserial /dev/ttyS1\n");
       exit(1);
     }
@@ -36,8 +37,10 @@ int main(int argc, char** argv)
     if((strcmp(MODEMDEVICE_0, argv[1])==0)){
       porta=0;
 
-    }else{
+    }else if(strcmp(MODEMDEVICE_1, argv[1])==0){
       porta=1;
+    }else{
+      porta=2;
     }
 
 
@@ -47,7 +50,7 @@ int main(int argc, char** argv)
     }
 
 
-    sleep(10); //Resolve bug de receber lixo
+    sleep(1); //Resolve bug de receber lixo
 
 
     if(llclose(fd,FLAG_LL_CLOSE_RECEIVER_DISC)!=0){
