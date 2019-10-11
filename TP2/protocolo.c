@@ -12,8 +12,8 @@ int sendBlock(const int flag, const int fd);
 int readBlock(const int flag, const int fd);
 
 DataStruct createMessage(unsigned int sequenceNumber, char *buffer, int length);
-unsigned char* BBC2Stufying (unsigned char *BBC2, int *bcc2StufSize);
-unsigned char* dataStuffing (unsigned char *data, int *dataStufSize);
+unsigned int BBC2Stufying (unsigned char *BBC2);
+unsigned int dataStuffing (unsigned char *data, int length, unsigned char *fieldD);
 
 
 int openNonCanonical(int port_number)
@@ -473,38 +473,47 @@ int llopen(int port_number, int flag)
 
 int llwrite(int fd, char * buffer, int length)  {
 
+  static unsigned int sequenceNumber = 0;
   int num_bytes = 0;
   int dataStufSize = length;
   int bcc2StufSize = 1;
-  unsigned char answer;
-  static unsigned int sequenceNumber = 0;
+  unsigned char answer = C_REJ((sequenceNumber + 1) % 2);
+  unsigned char correctAnswer = C_RR((sequenceNumber + 1) % 2);
 
   DataStruct data = createMessage(sequenceNumber, buffer, length);
 
-  while(answer != C_RR((sequenceNumber + 1) % 2)) {
+  if (signal(SIGALRM, alarm_handler) == SIG_ERR) {
+    perror("Error in ignoring SIG ALARM handler");
+  }
 
-    if (signal(SIGALRM, alarm_handler) == SIG_ERR) {
-      perror("Error in ignoring SIG ALARM handler");
-    }
+  //Timeout Cycle
+  while(n_tries && answer != correctAnswer){
 
     if((num_bytes = write(fd, &data, 4 * sizeof(unsigned char))) != 4)
       return -1;
+
+    //REJ Cycle
+    while(answer != correctAnswer) {
+        
+      if((num_bytes = write(fd, &data.fieldD, dataStufSize*sizeof(unsigned char))) != dataStufSize)
+        return -1;
       
-    if((num_bytes = write(fd, &data.fieldD, dataStufSize*sizeof(unsigned char))) != dataStufSize)
-      return -1;
-    
-    if((num_bytes = write(fd, &data.fieldBCC2, sizeof(unsigned char))) != 1)
-      return -1;
+      if((num_bytes = write(fd, &data.fieldBCC2, sizeof(unsigned char))) != 1)
+        return -1;
 
-    if((num_bytes = write(fd, &data.flag, sizeof(unsigned char))) != 1)
-      return -1;
- 
-    alarm(TIMEOUT);
+      if((num_bytes = write(fd, &data.flag, sizeof(unsigned char))) != 1)
+        return -1;
+  
+      alarm(TIMEOUT);
 
-    read(fd, &answer, 1);
+      read(fd, &answer, 1);
 
-    signal(SIGALRM, SIG_IGN);
+      signal(SIGALRM, SIG_IGN);
+    }
   }
+
+  free(data.fieldD);
+  free(data.fieldBCC2);
 
   sequenceNumber = (sequenceNumber + 1) % 2;
   
@@ -670,70 +679,64 @@ DataStruct createMessage(unsigned int sequenceNumber, char* buffer, int length) 
   data.flag = FLAG;
   data.fieldC = C(sequenceNumber);
   data.fieldBCC1 = data.fieldA ^ data.fieldC;
-  *(data.fieldBCC2) = buffer[0];
+  data.fieldBCC2 = (unsigned char*) malloc(2 * sizeof(unsigned char));
+  data.fieldBCC2[0] = buffer[0];
 
   for(int i = 0; i < length; i++) {
-    *(data.fieldBCC2) =  *(data.fieldBCC2) ^ data.fieldD[i];
+    data.fieldBCC2[0] ^=  data.fieldD[i];
   }
 
-  data.fieldBCC2 = BBC2Stufying(data.fieldBCC2, data.bcc2StufSize);
-  *(data.dataStufSize) = length;
-  data.fieldD = dataStuffing(buffer, data.dataStufSize);
+  //Max size is 2 * length because byte stuffing doubles size
+  data.fieldD = (unsigned char *) malloc(2 * length);
+
+  data.bcc2StufSize = BBC2Stufying(data.fieldBCC2);
+  data.dataStufSize = dataStuffing(buffer, length, data.fieldD);
   
   return data;
 }
 
-unsigned char* BBC2Stufying (unsigned char *BBC2, int *bcc2StufSize) { 
-  
-  unsigned char* stuffedBBC2 = (unsigned char*)malloc(sizeof(unsigned char));
+unsigned int BBC2Stufying (unsigned char *BBC2) { 
+  unsigned int size = 1;
 
   if(*BBC2 == FLAG) {
-    stuffedBBC2 = (unsigned char *) realloc(stuffedBBC2, 2*sizeof(unsigned char));
-    stuffedBBC2[0] = ESC;
-    stuffedBBC2[1] = ESC_FLAG;
-    *bcc2StufSize = 2;
+    BBC2[0] = ESC;
+    BBC2[1] = ESC_FLAG;
+    size = 2;
   }
 
   else if(*BBC2 == ESC) {
-    stuffedBBC2 = (unsigned char *) realloc(stuffedBBC2, 2*sizeof(unsigned char));
-    stuffedBBC2[0] = ESC;
-    stuffedBBC2[1] = ESC_ESC;
-    *bcc2StufSize = 2;
+    BBC2[0] = ESC;
+    BBC2[1] = ESC_ESC;
+    size = 2;
   }
 
-  else {
-    stuffedBBC2[0] = *BBC2;
-    *bcc2StufSize = 1;
-  }
-
-  return stuffedBBC2;
+  return size;
 }
 
-unsigned char* dataStuffing (unsigned char* data, int *dataStufSize) { 
+unsigned int dataStuffing (unsigned char* data, int length, unsigned char *fieldD) { 
   
-  unsigned char* buffer = (unsigned char *) malloc(2 *(*dataStufSize));
-  int pos = 0;
+  unsigned int pos = 0;
 
-  for (int i = 0; i < *dataStufSize; i++) {
+  for (int i = 0; i < length; i++) {
     
-    buffer[i + pos] = data[i];
+    data[i + pos] = data[i];
 
-    if(buffer[i] == FLAG) {
-      buffer[i] = ESC;
+    if(data[i] == FLAG) {
+      fieldD[i] = ESC;
       pos++;
-      buffer[i+pos] = ESC_FLAG;
+      fieldD[i+pos] = ESC_FLAG;
     }
 
-    else if(buffer[i] == ESC) {
-      buffer[i] = ESC;
+    else if(data[i] == ESC) {
+      fieldD[i] = ESC;
       pos++;
-      buffer[i+pos] = ESC_ESC;
+      fieldD[i+pos] = ESC_ESC;
     }
   }
 
-  *dataStufSize += pos;
+  length += pos;
 
-  return buffer;
+  return length;
 }
 
 int llclose(int fd, int flag)

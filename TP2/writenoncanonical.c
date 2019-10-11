@@ -45,7 +45,7 @@ int main(int argc, char** argv)
 
     //printf("Sai do Sleep, LL open");
 
-    if(llopen(0,FLAG_LL_OPEN_TRANSMITTER) < 0){
+    if( (fd = llopen(0,FLAG_LL_OPEN_TRANSMITTER)) < 0){
       printf("Error in llopen function\n");
       return -1;
     }
@@ -54,6 +54,12 @@ int main(int argc, char** argv)
     O ciclo FOR e as instru��es seguintes devem ser alterados de modo a respeitar
     o indicado no gui�o
   */
+
+    int ret = 0;
+
+    ret = llwrite(fd, "ola", 3);
+
+    printf("Return: %d\n", ret);
     sleep(1);
 
     if(llclose(fd,FLAG_LL_CLOSE_RECEIVER_DISC)!=LL_CLOSE_SUCESS){

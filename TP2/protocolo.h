@@ -25,8 +25,8 @@ typedef struct {
     unsigned char* fieldBCC2;
     
     //Other important variables
-    unsigned int *bcc2StufSize;
-    unsigned int *dataStufSize;
+    unsigned int bcc2StufSize;
+    unsigned int dataStufSize;
 } DataStruct;
 
 /**
