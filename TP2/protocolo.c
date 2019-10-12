@@ -233,11 +233,12 @@ int sendBlock(int flag, int fd)
 
     buf[A_INDEX] = A_CE_AR;
 
-    if (FLAG_LL_CLOSE_TRANSMITTER_DISC)
+    if (flag==FLAG_LL_CLOSE_TRANSMITTER_DISC)
     {
+      printf("Preenchi com disc-- Ua\n");
       buf[C_INDEX] = C_DISC;
     }
-    else if (FLAG_LL_CLOSE_TRANSMITTER_UA)
+    else if (flag==FLAG_LL_CLOSE_TRANSMITTER_UA)
     {
       buf[C_INDEX] = C_UA;
     }
@@ -299,7 +300,7 @@ int readBlock(int flag, int fd)
   printf("\nRecebi:");
 
 
-  if (flag == FLAG_LL_OPEN_RECEIVER || flag == FLAG_LL_OPEN_TRANSMITTER  || flag == FLAG_LL_CLOSE_TRANSMITTER_UA || flag == FLAG_LL_CLOSE_RECEIVER_DISC || flag == FLAG_LL_CLOSE_RECEIVER_UA)
+  if (flag == FLAG_LL_OPEN_RECEIVER || flag == FLAG_LL_OPEN_TRANSMITTER  || flag == FLAG_LL_CLOSE_TRANSMITTER_UA || flag == FLAG_LL_CLOSE_RECEIVER_DISC)
   {
 
     for (size = 0; state != ST_STOP && size < MAX_BUF; size++)
@@ -421,11 +422,6 @@ int readBlock(int flag, int fd)
         {
           state = ST_BCC_OK;
         }
-
-        else if (leitura == (A_CE_AR ^ C_UA) && flag == FLAG_LL_CLOSE_RECEIVER_UA)
-        {
-          state = ST_BCC_OK;
-        }
         else if (leitura == FLAG)
         {
 
@@ -463,7 +459,6 @@ int readBlock(int flag, int fd)
   }
   else if(flag==FLAG_LL_CLOSE_TRANSMITTER){
 
-    printf("Entrei no novo ciclo no emissor para receber o DISC\n");
     for (size = 0; state != ST_STOP && size < MAX_BUF; size++)
     {
       //A mensagem vai ser lida byte a byte para garantir que nao há falha de informacao
@@ -571,6 +566,121 @@ int readBlock(int flag, int fd)
       }
     }
     return READ_FAIL;
+
+
+
+  }
+  else if(flag == FLAG_LL_CLOSE_RECEIVER_UA){
+  
+    for (size = 0; state != ST_STOP && size < MAX_BUF; size++)
+    {
+      //A mensagem vai ser lida byte a byte para garantir que nao há falha de informacao
+
+      if ((read(fd, &leitura, 1) != 0))
+      {
+        printf("%x ",leitura);
+      }
+
+      switch (state)
+      {
+      case ST_START:
+      {
+        //check FLAG byte
+        if (leitura == FLAG)
+        {
+          state = ST_FLAG_RCV;
+        }
+      }
+      break;
+
+      case ST_FLAG_RCV:
+
+        switch (leitura)
+        {
+        case A_CE_AR:
+        {
+          //Recebi uma mensagem do emissor ou um resposta do recetor
+          state = ST_A_RCV;
+          break;
+        }
+
+        case FLAG:
+          //Same state
+
+          break;
+        default:
+          state = ST_START;
+        }
+
+        break;
+
+      case ST_A_RCV:
+        
+        switch (leitura)
+        {
+        case C_UA:
+
+          state = ST_C_RCV;
+          
+        break;
+
+        case FLAG:
+          //received FLAG, go to flag state
+          state = ST_FLAG_RCV;
+          break;
+
+        default:
+          //received other, go to start
+          state = ST_START;
+          break;
+        }
+        break;
+
+      case ST_C_RCV:
+      {
+
+        //received BCC, check BCC
+
+        if (leitura == (A_CE_AR ^ C_UA))
+        {
+          state = ST_BCC_OK;
+        }
+
+        else if (leitura == FLAG)
+        {
+          //Received FLAG
+          state = ST_FLAG_RCV;
+        }
+        else
+        {
+          //Received other
+          state = ST_START;
+        }
+
+        break;
+      }
+
+      case ST_BCC_OK:
+        //check FLAG byte
+        if (leitura == FLAG)
+        {
+          //received all, stop cycle
+          printf("\nSucesso\n");
+          return READ_SUCCESS;
+        }
+        else
+          //received other, go to start
+          state = ST_START;
+        break;
+
+      default:
+        state = ST_START;
+        break;
+      }
+    }
+    return READ_FAIL;
+
+
 
 
 
@@ -1030,7 +1140,7 @@ int llclose(int fd, int flag)
 
     while (read_bloc_ret == READ_FAIL)
     {
-      read_bloc_ret = readBlock(flag, FLAG_LL_CLOSE_TRANSMITTER_DISC);
+      read_bloc_ret = readBlock(FLAG_LL_CLOSE_RECEIVER_UA,fd);
     }
 
     if (read_bloc_ret == READ_FAIL)
