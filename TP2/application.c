@@ -38,11 +38,15 @@ int sendControlBlock(int fd, int fieldC, char* fileSize, char* fileName) {
     for (uint i = 0; i < strlen(fileName); i++)
 		control.tlv[1].value[i] = fileName[i];
 
+   //Write FileSize
+    if(llwrite(fd, fileSize, strlen(fileSize)) < 0) {
+        printf("Error while writing fileSize to Data Link layer!\n");
+        return -1;
+    }
 
-
-   //Write block
-    if(llwrite(fd, ?, ?) < 0) {
-        printf("Error while writing control block to Data Link layer!\n");
+    //Write FileName
+    if(llwrite(fd, fileName, strlen(fileName)) < 0) {
+        printf("Error while writing fileName to Data Link layer!\n");
         return -1;
     }
 
