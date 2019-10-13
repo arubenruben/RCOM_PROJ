@@ -29,20 +29,21 @@ typedef enum {
 
 typedef struct {
     ControlField fieldC;
-    uint fieldN;
-    uint fieldL2;
-    uint fieldL1;
+    uchar fieldN;
+    uchar fieldL2;
+    uchar fieldL1;
     char *fieldP;
 } AppDataStruct;
 
 typedef struct {
-    uint fieldC;
+    uchar fieldC;
+    uchar length;
     TLV tlv[2];
 } AppControlStruct;
 
 typedef struct {
   Type type;
-  uint length;
+  uchar length;
   char *value;
 } TLV;
 

@@ -1,6 +1,6 @@
 #include "application.h"
 
-int sendDataBlock(int fd, uint sequenceNumber, char* buffer, uint length) {
+int sendDataBlock(int fd, uint sequenceNumber, char *buffer, uint length) {
     AppDataStruct data;
 
     //Create AppDataStruct
@@ -9,9 +9,10 @@ int sendDataBlock(int fd, uint sequenceNumber, char* buffer, uint length) {
     data.fieldL2 = length / 256;
     data.fieldL1 = length % 256;
     memcpy(data.fieldP, buffer, length);
+    data.length = length + 4;
 
     //Write block
-    if(llwrite(fd, buffer, length) < 0) {
+    if(llwrite(fd, data, data.length) < 0) {
         printf("Error while writing data block to Data Link layer!\n");
         return -1;
     }
@@ -19,7 +20,7 @@ int sendDataBlock(int fd, uint sequenceNumber, char* buffer, uint length) {
     return 0;
 }
 
-int sendControlBlock(int fd, int fieldC, char* fileSize, char* fileName) {
+int sendControlBlock(int fd, int fieldC, char *fileSize, char *fileName) {
     AppControlStruct control;
     
     //Alocates memory value in TLV message
@@ -37,16 +38,12 @@ int sendControlBlock(int fd, int fieldC, char* fileSize, char* fileName) {
     control.tlv[1].length = strlen(fileName);
     for (uint i = 0; i < strlen(fileName); i++)
 		control.tlv[1].value[i] = fileName[i];
+    
+    control.length = strlen(fileSize) + strlen(fileSize) + 5;
 
    //Write FileSize
-    if(llwrite(fd, fileSize, strlen(fileSize)) < 0) {
+    if(llwrite(fd, control.tlv, control.length) < 0) {
         printf("Error while writing fileSize to Data Link layer!\n");
-        return -1;
-    }
-
-    //Write FileName
-    if(llwrite(fd, fileName, strlen(fileName)) < 0) {
-        printf("Error while writing fileName to Data Link layer!\n");
         return -1;
     }
 
