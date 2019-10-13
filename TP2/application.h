@@ -13,6 +13,7 @@
 #include "flags.h"
 
 typedef unsigned int uint;
+typedef unsigned char uchar;
 
 typedef enum {
     Data = 1, 
@@ -20,20 +21,30 @@ typedef enum {
     End = 3
 } ControlField; 
 
+typedef enum {
+    FileSize = 1, 
+    FileName = 2, 
+    //Define other values if necessary
+} Type; 
+
 typedef struct {
     ControlField fieldC;
     uint fieldN;
     uint fieldL2;
     uint fieldL1;
-    unsigned char* fieldP;
+    char *fieldP;
 } AppDataStruct;
 
 typedef struct {
     uint fieldC;
-    uint fieldT;
-    uint fieldL;
-    uint fieldV;
+    TLV tlv[2];
 } AppControlStruct;
+
+typedef struct {
+  Type type;
+  uint length;
+  char *value;
+} TLV;
 
 
 /**
@@ -48,24 +59,29 @@ int sendDataBlock(int fd, uint sequenceNumber, char* buffer, uint length);
 
 /**
 * ...description...
-* @param {...} fd
-* @param {...} flag
+* @param {file descriptor} fd
+* @param {...} buf
+* @param {...} length
 * @return {...} 0 in success, -1 otherwise
 */
 int receiveDataBlock(int fd, int* N, char** buf, int* length);
 
 /**
 * ...description...
-* @param {...} porta
-* @param {...} flag
+* @param {file descriptor} fd
+* @param {control field(START/END)} fieldC
+* @param {TLV first message} fileSize
+* @param {TLV second message} fileName
 * @return {...} 0 in success, -1 otherwise
 */
 int sendControlBlock(int fd, int fieldC, char* fileSize, char* fileName);
 
 /**
 * ...description...
-* @param {...} porta
-* @param {...} flag
+* @param {...} fd
+* @param {...} controlPackageType
+* @param {...} fileLength
+* @param {...} fileName
 * @return {...} 0 in success, -1 otherwise
 */
 int receiveControlBlock(int fd, int* controlPackageType, int* fileLength, char** fileName);
