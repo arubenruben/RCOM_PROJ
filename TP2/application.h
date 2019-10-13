@@ -36,11 +36,13 @@ typedef struct {
 } AppControlStruct;
 
 
-
 /**
 * ...description...
-* @param {...} porta
-* @param {...} flag
+* @param {file descriptor} fd
+* @param {sequence number (%255)} sequenceNumber
+* @param {data} buffer
+* @param {data length} length
+* @return {...} 0 in success, -1 otherwise
 */
 int sendDataBlock(int fd, uint sequenceNumber, char* buffer, uint length);
 
@@ -48,6 +50,7 @@ int sendDataBlock(int fd, uint sequenceNumber, char* buffer, uint length);
 * ...description...
 * @param {...} fd
 * @param {...} flag
+* @return {...} 0 in success, -1 otherwise
 */
 int receiveDataBlock(int fd, int* N, char** buf, int* length);
 
@@ -55,6 +58,7 @@ int receiveDataBlock(int fd, int* N, char** buf, int* length);
 * ...description...
 * @param {...} porta
 * @param {...} flag
+* @return {...} 0 in success, -1 otherwise
 */
 int sendControlBlock(int fd, int fieldC, char* fileSize, char* fileName);
 
@@ -62,5 +66,6 @@ int sendControlBlock(int fd, int fieldC, char* fileSize, char* fileName);
 * ...description...
 * @param {...} porta
 * @param {...} flag
+* @return {...} 0 in success, -1 otherwise
 */
 int receiveControlBlock(int fd, int* controlPackageType, int* fileLength, char** fileName);
