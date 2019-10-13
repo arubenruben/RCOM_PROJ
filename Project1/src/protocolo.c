@@ -14,7 +14,8 @@ static struct termios oldtio;
 static int n_tries = MAX_RETR;
 
 DataStruct createMessage(unsigned int sequenceNumber, char *buffer, int length);
-unsigned int BBC2Stufying(unsigned char *BBC2);
+DataStruct *pointer_to_data=NULL;
+unsigned int BCC2Stufying(unsigned char *BCC2);
 unsigned int dataStuffing(unsigned char *data, int length, unsigned char *fieldD);
 
 int openNonCanonical(int port_number)
@@ -109,8 +110,6 @@ void alarm_handler_set_signal(int signo)
 void alarm_handler_disc_signal(int signo)
 {
 
-  printf("Handling do ll_close_chamado\n");
-
   if (signo != SIGALRM)
   {
     printf("Handler nao executado\n");
@@ -135,6 +134,31 @@ void alarm_handler_disc_signal(int signo)
       printf("Handling undefined. STOP\n");
       exit(-1);
     }
+
+    alarm(TIMEOUT);
+    n_tries--;
+  }
+  else
+  {
+    printf("No LLCLOSE fui incapaz de desligar corretamente\nMatei o processo\n");
+    exit(-1);
+  }
+
+  return;
+}
+
+void alarm_handler_data(int signo)
+{
+
+  if (signo != SIGALRM)
+  {
+    printf("Handler nao executado\n");
+    return;
+  }
+  
+  if (n_tries > 0)
+  {
+    sendBlock(FLAG_LL_DATA_SEND,fd_for_handler);
 
     alarm(TIMEOUT);
     n_tries--;
@@ -276,18 +300,35 @@ int sendBlock(int flag, int fd)
       return WRITE_FAIL;
     }
   }
+  else if(flag==FLAG_LL_DATA_SEND)
+  {
+    int n_bytes=-1;
+
+    if((n_bytes=write(fd,pointer_to_data,pointer_to_data->size_of_data_frame)!=pointer_to_data->size_of_data_frame)){
+      printf("Nao escrevi o bloco de data todo");
+      return WRITE_FAIL;
+
+    }else{
+      return n_bytes;
+    }
+
+
+  }
   else
   {
     printf("SEND BLOCK not implemented\n");
     return WRITE_FAIL;
   }
 
+  if(flag!=FLAG_LL_DATA_SEND){
 
-  for(int j=0;j<BUF_SIZE;j++){
-    printf("%x ",buf[j]);
+    for(int j=0;j<BUF_SIZE;j++){
+      printf("%x ",buf[j]);
+    }
+
+    printf("\n");
+
   }
-
-  printf("\n");
 
   return WRITE_SUCCESS;
 }
@@ -297,7 +338,7 @@ int readBlock(int flag, int fd)
 
   unsigned char leitura;
   unsigned int size = 0, state = ST_START;
-  printf("\nRecebi:");
+  printf("\nRecebi:\n");
 
 
   if (flag == FLAG_LL_OPEN_RECEIVER || flag == FLAG_LL_OPEN_TRANSMITTER  || flag == FLAG_LL_CLOSE_TRANSMITTER_UA || flag == FLAG_LL_CLOSE_RECEIVER_DISC)
@@ -679,11 +720,319 @@ int readBlock(int flag, int fd)
       }
     }
     return READ_FAIL;
+  }
 
+  else if(flag==FLAG_DATA_SEEKING_ANSWER_WITH0){
 
+    for (size = 0; state != ST_STOP && size < MAX_BUF; size++)
+    {
+      //A mensagem vai ser lida byte a byte para garantir que nao há falha de informacao
 
+      if ((read(fd, &leitura, 1) != 0))
+      {
+        printf("%x ",leitura);
+      }
 
+      switch (state)
+      {
+      case ST_START:
+      {
+        //check FLAG byte
+        if (leitura == FLAG)
+        {
+          state = ST_FLAG_RCV;
+        }
+      }
+      break;
 
+      case ST_FLAG_RCV:
+
+        switch (leitura)
+        {
+        case A_CE_AR:
+        {
+          //Recebi uma mensagem do emissor ou um resposta do recetor
+          state = ST_A_RCV;
+          break;
+        }
+
+        case FLAG:
+          //Same state
+
+          break;
+        default:
+          state = ST_START;
+        }
+
+        break;
+
+      case ST_A_RCV:
+        
+        switch (leitura)
+        {
+        case C_REJ(0):
+
+          state = ST_C_RCV_REJ;
+          
+        break;
+
+        case C_RR(0):
+
+          state=ST_C_RCV_RR;
+
+        break;
+
+        case FLAG:
+          //received FLAG, go to flag state
+          state = ST_FLAG_RCV;
+          break;
+
+        default:
+          //received other, go to start
+          state = ST_START;
+          break;
+        }
+        break;
+
+      case ST_C_RCV_REJ:
+      {
+
+        //received BCC, check BCC
+
+        if (leitura == (A_CE_AR ^ C_REJ(0)))
+        {
+          state = ST_BCC_OK;
+        }
+
+        else if (leitura == FLAG)
+        {
+          //Received FLAG
+          state = ST_FLAG_RCV;
+        }
+        else
+        {
+          //Received other
+          state = ST_START;
+        }
+
+        break;
+      }
+
+      case ST_C_RCV_RR:
+      {
+
+        //received BCC, check BCC
+
+        if (leitura == (A_CE_AR ^ C_RR(0)))
+        {
+          state = ST_BCC_OK;
+        }
+
+        else if (leitura == FLAG)
+        {
+          //Received FLAG
+          state = ST_FLAG_RCV;
+        }
+        else
+        {
+          //Received other
+          state = ST_START;
+        }
+
+        break;
+      }
+
+      case ST_BCC_OK_REJ:
+
+      
+        //check FLAG byte
+        if (leitura == FLAG)
+        {
+          //received all, stop cycle
+          printf("\nSucesso\n");
+          return READ_REJ_SUCESS;
+        }
+        else
+          //received other, go to start
+          state = ST_START;
+        break;
+  
+      case ST_BCC_OK_RR:
+        //check FLAG byte
+        if (leitura == FLAG)
+        {
+          //received all, stop cycle
+          printf("\nSucesso\n");
+          return READ_RR_SUCESS;
+        }
+        else
+          //received other, go to start
+          state = ST_START;
+        break;
+
+      default:
+        state = ST_START;
+        break;
+      }
+    }
+    return READ_FAIL;
+  }
+  
+  
+  else if(flag==FLAG_DATA_SEEKING_ANSWER_WITH1){
+
+    for (size = 0; state != ST_STOP && size < MAX_BUF; size++)
+    {
+      //A mensagem vai ser lida byte a byte para garantir que nao há falha de informacao
+
+      if ((read(fd, &leitura, 1) != 0))
+      {
+        printf("%x ",leitura);
+      }
+
+      switch (state)
+      {
+      case ST_START:
+      {
+        //check FLAG byte
+        if (leitura == FLAG)
+        {
+          state = ST_FLAG_RCV;
+        }
+      }
+      break;
+
+      case ST_FLAG_RCV:
+
+        switch (leitura)
+        {
+        case A_CE_AR:
+        {
+          //Recebi uma mensagem do emissor ou um resposta do recetor
+          state = ST_A_RCV;
+          break;
+        }
+
+        case FLAG:
+          //Same state
+
+          break;
+        default:
+          state = ST_START;
+        }
+
+        break;
+
+      case ST_A_RCV:
+        
+        switch (leitura)
+        {
+        case C_REJ(1):
+
+          state = ST_C_RCV_REJ;
+          
+        break;
+
+        case C_RR(1):
+
+          state=ST_C_RCV_RR;
+
+        break;
+
+        case FLAG:
+          //received FLAG, go to flag state
+          state = ST_FLAG_RCV;
+          break;
+
+        default:
+          //received other, go to start
+          state = ST_START;
+          break;
+        }
+        break;
+
+      case ST_C_RCV_REJ:
+      {
+
+        //received BCC, check BCC
+
+        if (leitura == (A_CE_AR ^ C_REJ(1)))
+        {
+          state = ST_BCC_OK;
+        }
+
+        else if (leitura == FLAG)
+        {
+          //Received FLAG
+          state = ST_FLAG_RCV;
+        }
+        else
+        {
+          //Received other
+          state = ST_START;
+        }
+
+        break;
+      }
+
+      case ST_C_RCV_RR:
+      {
+
+        //received BCC, check BCC
+
+        if (leitura == (A_CE_AR ^ C_RR(1)))
+        {
+          state = ST_BCC_OK;
+        }
+
+        else if (leitura == FLAG)
+        {
+          //Received FLAG
+          state = ST_FLAG_RCV;
+        }
+        else
+        {
+          //Received other
+          state = ST_START;
+        }
+
+        break;
+      }
+
+      case ST_BCC_OK_REJ:
+
+      
+        //check FLAG byte
+        if (leitura == FLAG)
+        {
+          //received all, stop cycle
+          printf("\nSucesso\n");
+          return READ_REJ_SUCESS;
+        }
+        else
+          //received other, go to start
+          state = ST_START;
+        break;
+  
+      case ST_BCC_OK_RR:
+        //check FLAG byte
+        if (leitura == FLAG)
+        {
+          //received all, stop cycle
+          printf("\nSucesso\n");
+          return READ_RR_SUCESS;
+        }
+        else
+          //received other, go to start
+          state = ST_START;
+        break;
+
+      default:
+        state = ST_START;
+        break;
+      }
+    }
+    return READ_FAIL;
   }
 
   else
@@ -745,7 +1094,6 @@ int llopen(int port_number, int flag)
   //Receiver
   else if (flag == FLAG_LL_OPEN_RECEIVER)
   {
-
     if (readBlock(FLAG_LL_OPEN_RECEIVER, fd) != READ_SUCCESS)
     {
       perror("Error in reading from llopen:");
@@ -763,50 +1111,74 @@ int llopen(int port_number, int flag)
   printf("LLOpen completed\n");
   return fd;
 }
-/*
+
+
+
+/*LLwrite Enviar uma mensagem do emissor para o recetor
+
+
+-Tem de preencher o bloco: Com o BCC calc
+-Tem de fazer stuffing
+-Tem de enviar tudo
+-Tem de ficar a espera da resposta: Se for REJ Envio outra vez (vou enivar para ja tudo. Depois vejo como vamos para llread)
+
+//So BCC2 e DADOS sao tidos em conta para stuffing. Os outros codigos estao escolhidos para nao ocorrer mal
+
+*/
+
 int llwrite(int fd, char *buffer, int length)
 {
 
+
+  //Nao esquecer que elas sao sempre cruzados envio 0 recebo 1. Comeco a 0
   static unsigned int sequenceNumber = 0;
   int num_bytes = 0;
+  int ret_resposta=READ_FAIL;
+  n_tries=MAX_RETR;
+
+  
+  
+  
   int dataStufSize = length;
   int bcc2StufSize = 1;
   unsigned char answer = C_REJ((sequenceNumber + 1) % 2);
   unsigned char correctAnswer = C_RR((sequenceNumber + 1) % 2);
 
   DataStruct data = createMessage(sequenceNumber, buffer, length);
+  data.size_of_data_frame=sizeof(data);
+  pointer_to_data=&data;
 
-  if (signal(SIGALRM, alarm_handler) == SIG_ERR)
+
+  
+  if (signal(SIGALRM, alarm_handler_data) == SIG_ERR)
   {
     perror("Error in ignoring SIG ALARM handler");
   }
 
-  //Timeout Cycle
-  while (n_tries && answer != correctAnswer)
-  {
+  
+  while(ret_resposta=READ_FAIL||ret_resposta==READ_REJ_SUCESS){
 
-    if ((num_bytes = write(fd, &data, 4 * sizeof(unsigned char))) != 4)
+    num_bytes=sendBlock(FLAG_LL_DATA_SEND,fd);
+    printf("%d\n",num_bytes);
+    
+    if(num_bytes==WRITE_FAIL){
+      printf("Erro a enviar o bloco\n");
       return -1;
-
-    //REJ Cycle
-    while (answer != correctAnswer)
-    {
-
-      if ((num_bytes = write(fd, &data.fieldD, dataStufSize * sizeof(unsigned char))) != dataStufSize)
-        return -1;
-
-      if ((num_bytes = write(fd, &data.fieldBCC2, sizeof(unsigned char))) != 1)
-        return -1;
-
-      if ((num_bytes = write(fd, &data.flag, sizeof(unsigned char))) != 1)
-        return -1;
-
-      alarm(TIMEOUT);
-
-      read(fd, &answer, 1);
-
-      signal(SIGALRM, SIG_IGN);
     }
+
+    alarm(TIMEOUT);
+    
+    if(sequenceNumber==0){
+
+      ret_resposta=readBlock(FLAG_DATA_SEEKING_ANSWER_WITH1,fd);
+
+
+    }else if(sequenceNumber==1){
+
+      ret_resposta=readBlock(FLAG_DATA_SEEKING_ANSWER_WITH0,fd);
+
+    }
+
   }
 
   free(data.fieldD);
@@ -814,9 +1186,11 @@ int llwrite(int fd, char *buffer, int length)
 
   sequenceNumber = (sequenceNumber + 1) % 2;
 
-  return (dataStufSize + 5);
+  return num_bytes;
+
+  
 }
-*/
+
 
 /*
 int llread(int fd, char *buffer)
@@ -996,45 +1370,57 @@ DataStruct createMessage(unsigned int sequenceNumber, char *buffer, int length)
 
   DataStruct data;
   data.flag = FLAG;
+  data.fieldA=A_CE_AR;
   data.fieldC = C(sequenceNumber);
   data.fieldBCC1 = data.fieldA ^ data.fieldC;
-  data.fieldBCC2 = (unsigned char *)malloc(2 * sizeof(unsigned char));
+
+  data.fieldBCC2 = (unsigned char *)malloc(sizeof(unsigned char));
+  
+  //Algortimo de calculo de BCC2 e 
+  //I_0=D0//I i+1= I i ^data i
+
   data.fieldBCC2[0] = buffer[0];
 
   for (int i = 0; i < length; i++)
   {
-    data.fieldBCC2[0] ^= data.fieldD[i];
+    data.fieldBCC2[0] ^= buffer[i];
   }
 
   //Max size is 2 * length because byte stuffing doubles size
-  data.fieldD = (unsigned char *)malloc(2 * length);
+  data.fieldD = (unsigned char *)malloc(sizeof(unsigned char)*length);
 
-  data.bcc2StufSize = BBC2Stufying(data.fieldBCC2);
+  data.bcc2StufSize = BCC2Stufying(data.fieldBCC2);
   data.dataStufSize = dataStuffing(buffer, length, data.fieldD);
 
   return data;
 }
 
-unsigned int BBC2Stufying(unsigned char *BBC2)
+unsigned int BCC2Stufying(unsigned char *BCC2)
 {
   unsigned int size = 1;
 
-  if (*BBC2 == FLAG)
+  if (BCC2[0] == FLAG)
   {
-    BBC2[0] = ESC;
-    BBC2[1] = ESC_FLAG;
+    //Vai ser necessario realocar memoria
+    BCC2=realloc(BCC2,2*sizeof(unsigned char));
+    BCC2[0] = ESC;
+    BCC2[1] = ESC_FLAG;
     size = 2;
   }
 
-  else if (*BBC2 == ESC)
+  else if (BCC2[0] == ESC)
   {
-    BBC2[0] = ESC;
-    BBC2[1] = ESC_ESC;
+    //Vai ser necessario realocar memoria
+    BCC2=realloc(BCC2,2*sizeof(unsigned char));
+
+    BCC2[0] = ESC;
+    BCC2[1] = ESC_ESC;
     size = 2;
   }
 
   return size;
 }
+
 
 unsigned int dataStuffing(unsigned char *data, int length, unsigned char *fieldD)
 {
@@ -1117,6 +1503,8 @@ int llclose(int fd, int flag)
   //Receiver block
   else if (flag == FLAG_LL_CLOSE_RECEIVER_DISC)
   {
+
+    printf("Estou aqui\n");
 
     if (signal(SIGALRM, alarm_handler_disc_signal) < 0)
     {

@@ -22,6 +22,9 @@
 #define FLAG_LL_CLOSE_RECEIVER_UA 6
 #define FLAG_HANDLER_CALL 7
 #define FLAG_LL_CLOSE_TRANSMITTER 8
+#define FLAG_LL_DATA_SEND 9
+#define FLAG_DATA_SEEKING_ANSWER_WITH1 10
+#define FLAG_DATA_SEEKING_ANSWER_WITH0 11
 
 //5 Byte message
 #define FLAG_INDEX_BEGIN 0
@@ -54,7 +57,9 @@
 //Return types
 #define INVALID_PARAMS -1
 #define READ_SUCCESS 0
-#define READ_FAIL 1
+#define READ_RR_SUCESS 4
+#define READ_REJ_SUCESS 5
+#define READ_FAIL -1
 #define WRITE_SUCCESS 0
 #define WRITE_FAIL 1
 #define NO_MEM -2
@@ -71,6 +76,10 @@
 #define ST_D 4
 #define ST_ESC_RCV 5
 #define ST_STOP 6
+#define ST_C_RCV_RR 7
+#define ST_C_RCV_REJ 8
+#define ST_BCC_OK_RR 9
+#define ST_BCC_OK_REJ 10
 
 #define HANDLING_CLOSE_EMISSOR 0
 #define HANDLING_CLOSE_RECETOR 1

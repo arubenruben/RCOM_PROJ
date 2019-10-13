@@ -27,6 +27,7 @@ typedef struct {
     //Other important variables
     unsigned int bcc2StufSize;
     unsigned int dataStufSize;
+    unsigned int size_of_data_frame;
 } DataStruct;
 
 /**
