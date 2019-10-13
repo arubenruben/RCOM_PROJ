@@ -2,7 +2,7 @@
 
 > **2018/2019** - 3rd Year, 1st Semester
 >
-> **Course:** Redes de Computadores: [ESOF page in sigarra](https://sigarra.up.pt/feup/pt/ucurr_geral.ficha_uc_view?pv_ocorrencia_id=436445) | Computer Networks
+> **Course:** Redes de Computadores: [RCOM page in sigarra](https://sigarra.up.pt/feup/pt/ucurr_geral.ficha_uc_view?pv_ocorrencia_id=436445) | Computer Networks
 >
 > **Project developed by:**\
 > Martim Silva ([motapinto](https://github.com/motapinto))\
