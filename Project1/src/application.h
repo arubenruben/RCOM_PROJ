@@ -1,3 +1,5 @@
+#pragma once
+
 typedef unsigned int uint;
 typedef unsigned char uchar;
 
@@ -14,9 +16,9 @@ typedef enum {
 } Type; 
 
 typedef struct {
-  Type type;
-  uchar length;
-  char *value;
+    Type type;
+    uchar length;
+    char *value;
 } TLV;
 
 typedef struct {

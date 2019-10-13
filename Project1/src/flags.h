@@ -5,23 +5,26 @@
 #define MODEMDEVICE_0 "/dev/ttyS0"
 #define MODEMDEVICE_1 "/dev/ttyS1"
 #define MODEMDEVICE_2 "/dev/ttyS2"
-#define _POSIX_SOURCE 1 /* POSIX compliant source */
+#define _POSIX_SOURCE 1 
 #define FALSE 0
 #define TRUE 1
 #define UNKNOWN_PORT -1
 #define OTHER_ERROR -2
 #define LER_BYTE_A_BYTE 1
 
-
+//LLOPEN
 #define FLAG_LL_OPEN_TRANSMITTER 1
 #define FLAG_LL_OPEN_RECEIVER 2
 
+//LLCLOSE
 #define FLAG_LL_CLOSE_TRANSMITTER_DISC 3
 #define FLAG_LL_CLOSE_TRANSMITTER_UA 4
 #define FLAG_LL_CLOSE_RECEIVER_DISC 5
 #define FLAG_LL_CLOSE_RECEIVER_UA 6
 #define FLAG_HANDLER_CALL 7
 #define FLAG_LL_CLOSE_TRANSMITTER 8
+#define LL_CLOSE_SUCESS 1
+#define LL_CLOSE_FAIL -1
 
 //5 Byte message
 #define FLAG_INDEX_BEGIN 0
@@ -29,7 +32,6 @@
 #define C_INDEX 2
 #define BCC_INDEX 3
 #define FLAG_INDEX_END 4
-
 #define START_INDEX 0
 
 //Flags values
@@ -59,8 +61,6 @@
 #define WRITE_FAIL 1
 #define NO_MEM -2
 
-#define LL_CLOSE_SUCESS 1
-#define LL_CLOSE_FAIL -1
 
 //State machine flags
 #define ST_START 0

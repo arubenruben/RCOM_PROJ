@@ -37,7 +37,7 @@ int receiveDataBlock(int fd, int *sequenceNumber, char *buffer) {
         return -1;
     }
 
-     length = 256 * data.fieldL2 + data.fieldL1;
+    length = 256 * data.fieldL2 + data.fieldL1;
 
     *sequenceNumber = data.fieldN;
 
