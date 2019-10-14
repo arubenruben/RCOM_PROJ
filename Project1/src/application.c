@@ -13,7 +13,7 @@ int sendDataBlock(int fd, uint sequenceNumber, char *buffer, uint length) {
     data.length = length + 4;
 
     // Write block to Data Link layer
-    if(llwrite(fd, data, data.length) < 0) {
+    if(llwrite(fd, (char*)&data, data.length) < 0) {
         printf("Error while writing data block to Data Link layer!\n");
         return -1;
     }
@@ -26,7 +26,7 @@ int receiveDataBlock(int fd, int *sequenceNumber, char *buffer) {
     uint length;
 
     // Read block from Data Link layer
-    if(llread(fd, &data) < 0) {
+    if(llread(fd, (char*)&data) < 0) {
         printf("Error while reading data block from Data Link layer!\n");
         return -1;
     }
@@ -70,11 +70,10 @@ int sendControlBlock(int fd, int fieldC, char *fileSize, char *fileName) {
     control.length = strlen(fileSize) + strlen(fileSize) + 5;
 
    // Write FileSize
-    if(llwrite(fd, control.tlv, control.length) < 0) {
+    if(llwrite(fd, (char*)&control, control.length) < 0) {
         printf("Error while writing fileSize to Data Link layer!\n");
         return -1;
     }
-
     return 0;
 }
 
@@ -82,7 +81,7 @@ int receiveControlBlock(int fd, uint *type , char *fileName) {
     AppControlStruct control;
 
     // Read block from Data Link layer
-    if(llread(fd, &control) < 0) {
+    if(llread(fd, (char*)&control) < 0) {
         printf("Error while reading control block from Data Link layer!\n");
         return -1;
     }
