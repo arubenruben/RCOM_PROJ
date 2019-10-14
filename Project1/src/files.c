@@ -55,6 +55,13 @@ int sendFile(char *fileName) {
 }
 
 int receiveFile(char *fileName) {
+    FILE* file = fopen(fileName, "w");
+    if(file == NULL) {
+        printf("Could not open/create %s!\n", fileName);
+        return -1;
+    }
+
+
     int fd = llopen(0, FLAG_LL_OPEN_TRANSMITTER);
     if(fd < 0) {
         printf("Error in llopen!\n");
@@ -82,10 +89,42 @@ int fileSize(FILE *fp) {
         printf("File pointer is NULL!\n");
         return -1;
     }
-    
-    while(fgetc(fp) != EOF) {
-        counter++;
+
+    if(fseek(fp, 0, SEEK_END) < 0) {
+        printf("Error in fseek!\n");
+        return -1;
+    }
+
+    if((counter = ftell(fp)) < 0) {
+        printf("Error in ftell!\n");
+        return -1;
+    }
+
+    if(fseek(fp, 0, SEEK_SET) < 0) {
+        printf("Error in fseek!\n");
+        return -1;
     }
 
     return counter;
+}
+
+int main(int argc, char* argv[]){
+
+    if(argc!=3){
+        printf("N de args errado\n");
+    }
+
+    char filename[BUF_SIZE];
+    //filename copiado dos argumentos
+    strcpy(filename,argv[1]);
+
+
+
+
+
+
+    
+
+
+
 }

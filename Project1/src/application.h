@@ -33,7 +33,8 @@ typedef struct {
 typedef struct {
     ControlField fieldC;
     uchar length;
-    TLV tlv[2];
+    TLV fileName;
+    TLV fileSize;
 } AppControlStruct;
 
 
