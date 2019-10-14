@@ -26,7 +26,7 @@ int sendFile(char *fileName) {
 
     // While reads file sendDataPackage
     while((length = fread(buffer, sizeof(char), MAX_BUF, file)) != EOF) {
-        if(sendDataPackage(fd, sequenceNumber%255, buffer, length) != EOF) {
+        if(sendDataBlock(fd, sequenceNumber%255, buffer, length) != EOF) {
             printf("Error in sendDataPackage!\n");
             return -1;
         }

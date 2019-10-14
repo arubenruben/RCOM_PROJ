@@ -51,12 +51,14 @@ int receiveDataBlock(int fd, int *sequenceNumber, char *buffer) {
 int sendControlBlock(int fd, int fieldC, int fileSize, char *fileName) {
     AppControlStruct control;
     
-    // Alocates memory value in TLV message
-    control.fileSize.value = (char*)malloc(sizeof(char) * strlen(fileSize));
-    control.fileName.value = (char*)malloc(sizeof(char) * strlen(fileName));
-
+    // Converts fileSize to char* to send via TLV struct
     char fileSizeString[15];
     sprintf(fileSizeString, "%d", fileSize);
+    
+    // Alocates memory value in TLV message
+    control.fileSize.value = (char*)malloc(sizeof(char) * strlen(fileSizeString));
+    control.fileName.value = (char*)malloc(sizeof(char) * strlen(fileName));
+
 
     // Create AppControlStruct
     control.fieldC = fieldC;
@@ -71,7 +73,7 @@ int sendControlBlock(int fd, int fieldC, int fileSize, char *fileName) {
     for (uint i = 0; i < strlen(fileName); i++)
 		control.fileName.value[i] = fileName[i];
     
-    control.length = strlen(fileSize) + strlen(fileSize) + 5;
+    control.length = strlen(fileSizeString) + strlen(fileName) + 5;
 
    // Write AppControlStruct to Data Link layer
     if(llwrite(fd, (char*)&control, control.length) < 0) {
