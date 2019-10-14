@@ -327,20 +327,52 @@ int sendBlock(int flag, int fd)
 
 
   }
+  else if (flag == FLAG_DATA_SENDING_ANSWER_RR_WITH1 || flag == FLAG_DATA_SENDING_ANSWER_RR_WITH0)
+  {
+    buf[FLAG_INDEX_BEGIN] = FLAG;
+
+    buf[A_INDEX] = A_CE_AR;
+
+    if(flag == FLAG_DATA_SENDING_ANSWER_RR_WITH1)
+      buf[C_INDEX] = C_RR(1);
+    else
+      buf[C_INDEX] = C_RR(0);
+
+    buf[BCC_INDEX] = buf[A_INDEX] ^ buf[C_INDEX];
+
+    buf[FLAG_INDEX_END] = FLAG;
+
+    if (write(fd, buf, BUF_SIZE) != BUF_SIZE)
+    {
+      perror("Erro no write do FLAG_DATA_SENDING_ANSWER_WITH1:");
+      return WRITE_FAIL;
+    }
+  }
+  else if (flag == FLAG_DATA_SENDING_ANSWER_REJ_WITH1 || flag == FLAG_DATA_SENDING_ANSWER_REJ_WITH0)
+  {
+    buf[FLAG_INDEX_BEGIN] = FLAG;
+
+    buf[A_INDEX] = A_CE_AR;
+
+    if(flag == FLAG_DATA_SENDING_ANSWER_REJ_WITH1)
+      buf[C_INDEX] = C_REJ(1);
+    else
+      buf[C_INDEX] = C_REJ(0);
+    
+    buf[BCC_INDEX] = buf[A_INDEX] ^ buf[C_INDEX];
+
+    buf[FLAG_INDEX_END] = FLAG;
+
+    if (write(fd, buf, BUF_SIZE) != BUF_SIZE)
+    {
+      perror("Erro no write do FLAG_DATA_SENDING_ANSWER_WITH1:");
+      return WRITE_FAIL;
+    }
+  }
   else
   {
     printf("SEND BLOCK not implemented\n");
     return WRITE_FAIL;
-  }
-
-  if(flag!=FLAG_LL_DATA_SEND){
-
-    for(int j=0;j<BUF_SIZE;j++){
-     printf("%x ",buf[j]);
-    }
-
-    printf("\n");
-
   }
 
   return WRITE_SUCCESS;
@@ -814,7 +846,7 @@ int readBlock(int flag, int fd)
 
         if (leitura == (A_CE_AR ^ C_REJ(0)))
         {
-          state = ST_BCC_OK;
+          state = ST_BCC_OK_REJ;
         }
 
         else if (leitura == FLAG)
@@ -838,7 +870,7 @@ int readBlock(int flag, int fd)
 
         if (leitura == (A_CE_AR ^ C_RR(0)))
         {
-          state = ST_BCC_OK;
+          state = ST_BCC_OK_RR;
         }
 
         else if (leitura == FLAG)
@@ -971,7 +1003,7 @@ int readBlock(int flag, int fd)
 
         if (leitura == (A_CE_AR ^ C_REJ(1)))
         {
-          state = ST_BCC_OK;
+          state = ST_BCC_OK_REJ;
         }
 
         else if (leitura == FLAG)
@@ -995,7 +1027,7 @@ int readBlock(int flag, int fd)
 
         if (leitura == (A_CE_AR ^ C_RR(1)))
         {
-          state = ST_BCC_OK;
+          state = ST_BCC_OK_RR;
         }
 
         else if (leitura == FLAG)
@@ -1238,9 +1270,8 @@ int llread(int fd, char *buffer)
   
   
   unsigned int size_buf = 0, state = ST_START, max_size = MAX_BUF;
-  bool error = false;
+  bool error = false, end = false;
   unsigned char *buf = NULL;
-  unsigned char answer = C_REJ(r);
   int size_buffer = 0;
 
   if (buffer == NULL || fd < 0)
@@ -1258,7 +1289,7 @@ int llread(int fd, char *buffer)
   }
 
   //While data is rejected be cause of errors go to state machine
-  while (answer == C_REJ(r))
+  while (!end)
   {
 
     //State machine
@@ -1388,14 +1419,25 @@ int llread(int fd, char *buffer)
       //Check BCC2
       if (checkBCC2(buffer, size_buffer))
       {
-        printf("Accept\n");
         r = (r + 1) % 2;
-        answer = C_RR(r);
+        end = true;
       }
     }
 
     //Send acknowlegment
-    write(fd, &answer, 1);
+    if(end){
+      if(r)
+        sendBlock(FLAG_DATA_SENDING_ANSWER_RR_WITH1, fd);
+      else
+        sendBlock(FLAG_DATA_SENDING_ANSWER_RR_WITH0, fd);
+    }
+    else{
+        if(r)
+        sendBlock(FLAG_DATA_SENDING_ANSWER_REJ_WITH1, fd);
+      else
+        sendBlock(FLAG_DATA_SENDING_ANSWER_REJ_WITH0, fd);
+    }
+
     size_buf = DATA_START_INDEX;
     state = ST_D;
   }
