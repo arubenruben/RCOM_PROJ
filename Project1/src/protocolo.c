@@ -13,8 +13,9 @@ int readBlock( int flag,  int fd);
 static struct termios oldtio;
 static int n_tries = MAX_RETR;
 
-DataStruct createMessage(unsigned int sequenceNumber, char *buffer, int length);
 DataStruct *pointer_to_data=NULL;
+
+DataStruct createMessage(unsigned int sequenceNumber, char *buffer, int length);
 unsigned int BCC2Stufying(unsigned char *BCC2);
 unsigned int dataStuffing(unsigned char *data, int length, unsigned char *fieldD);
 
@@ -302,11 +303,14 @@ int sendBlock(int flag, int fd)
   }
   else if(flag==FLAG_LL_DATA_SEND)
   {
-    int n_bytes=-1;
+    int n_bytes=0;
 
-    n_bytes=write(fd,pointer_to_data,pointer_to_data->size_of_data_frame);
+    n_bytes += write(fd, pointer_to_data, 4);
+    n_bytes += write(fd, pointer_to_data->fieldD, pointer_to_data->dataStufSize);
+    n_bytes += write(fd, pointer_to_data->fieldBCC2, pointer_to_data->bcc2StufSize);
+    n_bytes += write(fd, &pointer_to_data->flag, 1);
   
-    if(n_bytes<0){
+    if(n_bytes != (pointer_to_data->bcc2StufSize + pointer_to_data->dataStufSize + 5)){
     
       printf("Nao escrevi o bloco de data todo");
       return WRITE_FAIL;
@@ -1280,7 +1284,6 @@ int llread(int fd, char *buffer)
       }
 
       printf("%x\n",buf[size_buf]);
-      continue;
 
       //Go through state machine
       switch (state)
@@ -1324,7 +1327,7 @@ int llread(int fd, char *buffer)
         else if (buf[size_buf] == FLAG)
         {
           state = ST_FLAG_RCV;
-          size_buf -= 2;
+          size_buf = 0;
         }
 
         else
