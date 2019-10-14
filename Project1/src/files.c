@@ -68,9 +68,9 @@ int receiveFile(char *fileName) {
         return -1;
     }
 
-    uint controlType;
+    uint controlType, sequenceNumber = 0;
 
-    // receive control package - START
+    // receive control block - START
     if(receiveControlBlock(fd, &controlType, fileName) < 0) {
         printf("Error in sendControlBlock!\n");
         return -1;
@@ -79,6 +79,14 @@ int receiveFile(char *fileName) {
             printf("controlType value is not START\n");
             return -1;
         }
+    }
+
+    char buffer[MAX_BUF];
+
+    // receive data block - DATA
+    if(receiveDataBlock(fd, &sequenceNumber, buffer) != 0) {
+        printf("Error in receiveDataBlock!\n");
+        return -1;
     }
 }
 

@@ -52,20 +52,23 @@ int sendControlBlock(int fd, int fieldC, int fileSize, char *fileName) {
     AppControlStruct control;
     
     // Alocates memory value in TLV message
-    control.tlv[0].value = (char*)malloc(sizeof(char) * strlen(fileSize));
-    control.tlv[1].value = (char*)malloc(sizeof(char) * strlen(fileName));
+    control.fileSize.value = (char*)malloc(sizeof(char) * strlen(fileSize));
+    control.fileName.value = (char*)malloc(sizeof(char) * strlen(fileName));
+
+    char fileSizeString[15];
+    sprintf(fileSizeString, "%d", fileSize);
 
     // Create AppControlStruct
     control.fieldC = fieldC;
-    control.tlv[0].type = FileSize;
-    control.tlv[0].length = strlen(fileSize);
+    control.fileSize.type = FileSize;
+    control.fileSize.length = strlen(fileSize);
     for (uint i = 0; i < strlen(fileSize); i++)
-		control.tlv[0].value[i] = fileSize[i];
+		control.fileSize.value[i] = fileSize[i];
 
-    control.tlv[1].type = FileName;
-    control.tlv[1].length = strlen(fileName);
+    control.fileName.type = FileName;
+    control.fileName.length = strlen(fileName);
     for (uint i = 0; i < strlen(fileName); i++)
-		control.tlv[1].value[i] = fileName[i];
+		control.fileName.value[i] = fileName[i];
     
     control.length = strlen(fileSize) + strlen(fileSize) + 5;
 
@@ -96,11 +99,11 @@ int receiveControlBlock(int fd, uint *type , char *fileName) {
     *type = control.fieldC;
 
     // FileSize
-    char *size = (char *)malloc(sizeof(char) * control.tlv[0].length);
-    memcpy(size, control.tlv[0].value, control.tlv[0].length);
+    char *size = (char *)malloc(sizeof(char) * control.fileSize.length);
+    memcpy(size, control.fileSize.value, control.fileSize.length);
 
     // FileName
-    memcpy(fileName, control.tlv[1].value, control.tlv[1].length);
+    memcpy(fileName, control.fileName.value, control.fileName.length);
 
     // Returns FileSize
     return atoi(size);
