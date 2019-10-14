@@ -12,8 +12,12 @@ typedef enum {
 typedef enum {
     FileSize = 1, 
     FileName = 2, 
-    //Define other values if necessary
 } Type; 
+
+typedef enum {
+    Receiver = 0, 
+    Sender = 1, 
+} machineType; 
 
 typedef struct {
     Type type;

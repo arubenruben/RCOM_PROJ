@@ -1,5 +1,6 @@
 #include "protocolo.h"
 #include "application.h"
+#include "files.h"
 
 int sendDataBlock(int fd, uint sequenceNumber, char *buffer, uint length) {
     AppDataStruct data;
@@ -110,4 +111,37 @@ int receiveControlBlock(int fd, uint *type , char *fileName) {
 
     // Returns FileSize
     return atoi(size);
+}
+
+int main(int argc, char* argv[]) {
+
+    if(argc != 3) {
+        printf("Usage:\tex: ./a.out textName.txt\n");
+        exit(1);
+    }
+
+    char filename[MAX_BUF];
+    strcpy(filename, argv[2]);
+
+    switch (atoi(argv[1])) 
+    {
+        case Receiver:
+            if(receiveFile() != 0) {
+                printf("Error in receiveFile!\n");
+                return -1;
+            }
+            break;
+        
+        case Sender:
+            if(sendFile(filename) < 0) {
+                printf("Error in sendFile!\n");
+                return -1;
+            }
+            break;
+        
+        default:
+            printf("Error in second argument(0/1)!\n");
+            printf("Exiting...\n");
+            return -1;
+    }
 }

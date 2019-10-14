@@ -149,24 +149,3 @@ int fileSize(FILE *fp) {
 
     return counter;
 }
-
-int main(int argc, char* argv[]){
-
-    if(argc!=3){
-        printf("N de args errado\n");
-    }
-
-    char filename[BUF_SIZE];
-    //filename copiado dos argumentos
-    strcpy(filename,argv[1]);
-
-
-
-
-
-
-    
-
-
-
-}
