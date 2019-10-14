@@ -34,6 +34,7 @@ typedef struct {
 * ...description...
 * @param {...} porta
 * @param {...} flag
+* @return {...} 
 */
 int llopen(int port_number, int flag);
 
@@ -42,6 +43,7 @@ int llopen(int port_number, int flag);
 * @param {file descriptor} fd
 * @param {...} buffer
 * @param {...} length
+* @return {...} 
 */
 int llwrite(int fd, unsigned char * buffer, int length);
 
@@ -49,12 +51,15 @@ int llwrite(int fd, unsigned char * buffer, int length);
 * ...description...
 * @param {file descriptor} fd
 * @param {...} buffer
+* @return {...} 
 */
 int llread(int fd, unsigned char * buffer);
 
 /**
 * ...description...
 * @param {file descriptor} fd
+* @param {...} flag
+* @return {...} 
 */
 int llclose(int fd, int flag);
 

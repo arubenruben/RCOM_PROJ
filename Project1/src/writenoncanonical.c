@@ -20,11 +20,8 @@ volatile int STOP=FALSE;
 
 int main(int argc, char** argv)
 {
-    int fd,c, res=0;
-    int porta;
-    struct termios oldtio,newtio;
-    char buf[255]="\n\n\n\n\nVIVA O FUTEBOL CLUBE DO PORTO\n\n\n\n\n\n", buf_receive[255];
-    int i, sum = 0, speed = 0;
+    int fd, port_number;
+    char buf[255] = "\n\n\n\n\nVIVA O FUTEBOL CLUBE DO PORTO\n\n\n\n\n\n";
 
     if ( (argc < 2) ||
   	     ((strcmp(MODEMDEVICE_0, argv[1])!=0) &&
@@ -33,30 +30,32 @@ int main(int argc, char** argv)
         exit(1);
     }
 
-    if(strcmp(MODEMDEVICE_0, argv[1]) == 0){
-        porta = 0;
+    if(strcmp(MODEMDEVICE_0, argv[1]) == 0) {
+        port_number = 0;
     }
 
-    else if(strcmp(MODEMDEVICE_1, argv[1]) == 0){
-        porta = 1;
+    else if(strcmp(MODEMDEVICE_1, argv[1]) == 0) {
+        port_number = 1;
     }
 
-    else{
-        porta = 2;
+    else {
+        port_number = 2;
     }
 
-    if((fd = llopen(porta, FLAG_LL_OPEN_TRANSMITTER)) < 0){
-        printf("Error in llopen function!\n");
+    if((fd = llopen(port_number, FLAG_LL_OPEN_TRANSMITTER)) < 0) {
+        printf("Error in llopen!\n");
         return -1;
     }
 
     sleep(3);
 
-
-    llwrite(fd,buf,strlen(buf));
+    if(llwrite(fd, (unsigned char*)buf, strlen(buf)) != 0) {
+        printf("Error in llwrite!\n");
+        return -1;
+    }
 
     if(llclose(fd,FLAG_LL_CLOSE_TRANSMITTER_DISC)!=LL_CLOSE_SUCESS){
-      printf("O LL close retornou erro\n");
+      printf("Error in llclose!\n");
       return -1;
     }
 
