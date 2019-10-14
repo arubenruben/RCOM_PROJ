@@ -175,12 +175,12 @@ void alarm_handler_data(int signo)
 
 int checkBCC2(unsigned char *buffer, unsigned int size)
 {
-  unsigned char bcc = buffer[size - 2];
+  unsigned char bcc = buffer[size - 1];
   unsigned char bcc_check = 0;
 
-  for (int i = 4; i < (size - 2); i++)
+  for (int i = 0; i < (size - 1); i++)
   {
-    bcc_check ^= buffer[size];
+    bcc_check ^= buffer[i];
   }
 
   return bcc == bcc_check;
@@ -190,7 +190,6 @@ int byteDeStuffing(unsigned char *dest, unsigned char *orig, unsigned int size_o
 {
   int size_dest = 0;
 
-  dest = (unsigned char *)malloc(size_orig * sizeof(unsigned char *));
   if (dest == NULL)
   {
     perror("Failled to allocate memory");
@@ -212,6 +211,9 @@ int byteDeStuffing(unsigned char *dest, unsigned char *orig, unsigned int size_o
 
     size_dest++;
   }
+
+  dest[size_dest] = '\0';
+  printf("ByteStuffing: %s\n", dest);
 
   return size_dest;
 }
@@ -1289,93 +1291,93 @@ int llread(int fd, char *buffer)
       switch (state)
       {
 
-      case ST_START:
-      {
-
-        if (buf[size_buf] == FLAG)
-          state = ST_FLAG_RCV;
-        else
-          size_buf = START_INDEX;
-      }
-
-      break;
-
-      case ST_FLAG_RCV:
-      {
-
-        if (buf[size_buf] == A_CE_AR)
-          state = ST_A_RCV;
-
-        else if (buf[size_buf] != FLAG)
+        case ST_START:
         {
-          state = ST_START;
-          size_buf = START_INDEX;
+
+          if (buf[size_buf] == FLAG)
+            state = ST_FLAG_RCV;
+          else
+            size_buf = START_INDEX;
         }
 
-        else
-          size_buf--;
-      }
+        break;
 
-      break;
-
-      case ST_A_RCV:
-      {
-
-        if (buf[size_buf] == C(r))
-          state = ST_C_RCV;
-
-        else if (buf[size_buf] == FLAG)
+        case ST_FLAG_RCV:
         {
-          state = ST_FLAG_RCV;
-          size_buf = 0;
+
+          if (buf[size_buf] == A_CE_AR)
+            state = ST_A_RCV;
+
+          else if (buf[size_buf] != FLAG)
+          {
+            state = ST_START;
+            size_buf = START_INDEX;
+          }
+
+          else
+            size_buf--;
         }
 
-        else
+        break;
+
+        case ST_A_RCV:
         {
-          state = ST_START;
-          size_buf = START_INDEX;
+
+          if (buf[size_buf] == C(r))
+            state = ST_C_RCV;
+
+          else if (buf[size_buf] == FLAG)
+          {
+            state = ST_FLAG_RCV;
+            size_buf = 0;
+          }
+
+          else
+          {
+            state = ST_START;
+            size_buf = START_INDEX;
+          }
         }
-      }
-      break;
+        break;
 
-      case ST_C_RCV:
-      {
+        case ST_C_RCV:
+        {
 
-        if (buf[size_buf] == (A_CE_AR ^ C(r)))
+          if (buf[size_buf] == (A_CE_AR ^ C(r)))
+            state = ST_D;
+
+          else if (buf[size_buf] == FLAG)
+          {
+            state = ST_FLAG_RCV;
+            size_buf -= 3;
+          }
+          else
+          {
+            state = ST_START;
+            size_buf = START_INDEX;
+          }
+        }
+        break;
+
+        case ST_D:
+        {
+
+          if (buf[size_buf] == FLAG)
+            state = ST_STOP;
+          else if (buf[size_buf] == ESC)
+            state = ST_ESC_RCV;
+        }
+        break;
+
+        case ST_ESC_RCV:
+        {
+          if (buf[size_buf] != ESC_FLAG & buf[size_buf] != ESC_ESC)
+            error = true;
+
           state = ST_BCC_OK;
-
-        else if (buf[size_buf] == FLAG)
-        {
-          state = ST_FLAG_RCV;
-          size_buf -= 3;
         }
-        else
-        {
-          state = ST_START;
-          size_buf = START_INDEX;
+        break;
         }
-      }
-      break;
-
-      case ST_D:
-      {
-
-        if (buf[size_buf] == FLAG)
-          state = ST_STOP;
-        else if (buf[size_buf] == ESC)
-          state = ST_ESC_RCV;
-      }
-      break;
-
-      case ST_ESC_RCV:
-      {
-        if (buf[size_buf] != ESC_FLAG & buf[size_buf] != ESC_ESC)
-          error = true;
-
-        state = ST_BCC_OK;
-      }
-      break;
-      }
     }
 
     if (!error)
@@ -1386,11 +1388,10 @@ int llread(int fd, char *buffer)
       //Check BCC2
       if (checkBCC2(buffer, size_buffer))
       {
+        printf("Accept\n");
         r = (r + 1) % 2;
         answer = C_RR(r);
       }
-      else //Free memory allocated for buffer
-        free(buffer);
     }
 
     //Send acknowlegment
@@ -1401,6 +1402,8 @@ int llread(int fd, char *buffer)
 
   //Free read buf
   free(buf);
+
+  buffer[size_buffer - 1] = '\0';
 
   return size_buffer - 1;
 }
@@ -1421,7 +1424,7 @@ DataStruct createMessage(unsigned int sequenceNumber, char *buffer, int length)
 
   data.fieldBCC2[0] = buffer[0];
 
-  for (int i = 0; i < length; i++)
+  for (int i = 1; i < length; i++)
   {
     data.fieldBCC2[0] ^= buffer[i];
   }
@@ -1471,14 +1474,14 @@ unsigned int dataStuffing(unsigned char *data, int length, unsigned char *fieldD
   {
     if (data[i] == FLAG)
      {
-      fieldD[i] = ESC;
+      fieldD[i + pos] = ESC;
       pos++;
       fieldD[i + pos] = ESC_FLAG;
     }
 
     else if (data[i] == ESC)
     {
-      fieldD[i] = ESC;
+      fieldD[i + pos] = ESC;
       pos++;
       fieldD[i + pos] = ESC_ESC;
 
