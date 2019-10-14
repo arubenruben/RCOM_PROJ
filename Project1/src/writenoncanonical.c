@@ -54,11 +54,12 @@ int main(int argc, char** argv)
 
 
     llwrite(fd,buf,strlen(buf));
-
+/*
     if(llclose(fd,FLAG_LL_CLOSE_TRANSMITTER_DISC)!=LL_CLOSE_SUCESS){
       printf("O LL close retornou erro\n");
       return -1;
     }
-
+*/
+    sleep(10);
     return 0;
 }

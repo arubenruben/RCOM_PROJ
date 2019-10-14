@@ -149,7 +149,7 @@ void alarm_handler_disc_signal(int signo)
 
 void alarm_handler_data(int signo)
 {
-
+  printf("Alarme\n");
   if (signo != SIGALRM)
   {
     printf("Handler nao executado\n");
@@ -217,7 +217,7 @@ int byteDeStuffing(unsigned char *dest, unsigned char *orig, unsigned int size_o
 
 int sendBlock(int flag, int fd)
 {
-  printf("\nEnviei:");
+  printf("Enviei:");
   
   unsigned char buf[BUF_SIZE + 1];
   
@@ -294,7 +294,7 @@ int sendBlock(int flag, int fd)
 
     buf[FLAG_INDEX_END] = FLAG;
 
-    if (write(fd_for_handler, buf, BUF_SIZE) != BUF_SIZE)
+    if (write(fd, buf, BUF_SIZE) != BUF_SIZE)
     {
       perror("Erro no write do FLAG_LL_CLOSE_TRANSMITTER_DISC:");
       return WRITE_FAIL;
@@ -304,11 +304,18 @@ int sendBlock(int flag, int fd)
   {
     int n_bytes=-1;
 
-    if((n_bytes=write(fd,pointer_to_data,pointer_to_data->size_of_data_frame)!=pointer_to_data->size_of_data_frame)){
+    n_bytes=write(fd,pointer_to_data,pointer_to_data->size_of_data_frame);
+  
+    if(n_bytes<0){
+    
       printf("Nao escrevi o bloco de data todo");
       return WRITE_FAIL;
 
     }else{
+      printf("Retornei sucesso do ll_data_send\n");
+      for(int i=0;i<3;i++){
+        printf("%c:\n",pointer_to_data->fieldD[i]);
+      }
       return n_bytes;
     }
 
@@ -323,7 +330,7 @@ int sendBlock(int flag, int fd)
   if(flag!=FLAG_LL_DATA_SEND){
 
     for(int j=0;j<BUF_SIZE;j++){
-      printf("%x ",buf[j]);
+     printf("%x ",buf[j]);
     }
 
     printf("\n");
@@ -730,7 +737,7 @@ int readBlock(int flag, int fd)
 
       if ((read(fd, &leitura, 1) != 0))
       {
-        printf("%x ",leitura);
+        printf("Li do receiver:%x\n ",leitura);
       }
 
       switch (state)
@@ -887,7 +894,7 @@ int readBlock(int flag, int fd)
 
       if ((read(fd, &leitura, 1) != 0))
       {
-        printf("%x ",leitura);
+        printf("lI DE RESPOSTA DO receiver%x\n ",leitura);
       }
 
       switch (state)
@@ -1137,13 +1144,6 @@ int llwrite(int fd, char *buffer, int length)
   n_tries=MAX_RETR;
 
   
-  
-  
-  int dataStufSize = length;
-  int bcc2StufSize = 1;
-  unsigned char answer = C_REJ((sequenceNumber + 1) % 2);
-  unsigned char correctAnswer = C_RR((sequenceNumber + 1) % 2);
-
   DataStruct data = createMessage(sequenceNumber, buffer, length);
   data.size_of_data_frame=sizeof(data);
   pointer_to_data=&data;
@@ -1157,9 +1157,9 @@ int llwrite(int fd, char *buffer, int length)
 
   
   while(ret_resposta=READ_FAIL||ret_resposta==READ_REJ_SUCESS){
+    printf("n vezes\n");
 
     num_bytes=sendBlock(FLAG_LL_DATA_SEND,fd);
-    printf("%d\n",num_bytes);
     
     if(num_bytes==WRITE_FAIL){
       printf("Erro a enviar o bloco\n");
@@ -1181,6 +1181,12 @@ int llwrite(int fd, char *buffer, int length)
 
   }
 
+  if (signal(SIGALRM, SIG_IGN) == SIG_ERR)
+  {
+      perror("Error in ignoring SIG ALARM handler");
+  }
+
+
   free(data.fieldD);
   free(data.fieldBCC2);
 
@@ -1191,12 +1197,40 @@ int llwrite(int fd, char *buffer, int length)
   
 }
 
-
 /*
+
+Em LL read:
+
+-Recebemos a mensagem
+-Verificamos o cabecalho.
+Dependendo do valor avancamos ou nao para o processamento dos dados
+
+Nao esta certo: Estado morto. Timeout
+
+Esta certo:
+
+Fazer o distuffing
+
+Testar Bcc2. 
+
+Testar se a trama e repetida ou nao
+
+Se repetida -> envio um RR nao passo nada à app
+Se nova -> Passo a app e envio a app
+
+----> Tambem se aplica ao caso de cabecalho certo, dados errados pq a seriacao da trama vem no C_VALUE
+
+
+*/
+
+
+
 int llread(int fd, char *buffer)
 {
   static unsigned int r = 0;
 
+  
+  
   unsigned int size_buf = 0, state = ST_START, max_size = MAX_BUF;
   bool error = false;
   unsigned char *buf = NULL;
@@ -1244,6 +1278,9 @@ int llread(int fd, char *buffer)
         perror("Failled to read");
         return READ_FAIL;
       }
+
+      printf("%x\n",buf[size_buf]);
+      continue;
 
       //Go through state machine
       switch (state)
@@ -1364,7 +1401,7 @@ int llread(int fd, char *buffer)
 
   return size_buffer - 1;
 }
-*/
+
 DataStruct createMessage(unsigned int sequenceNumber, char *buffer, int length)
 {
 
@@ -1387,7 +1424,7 @@ DataStruct createMessage(unsigned int sequenceNumber, char *buffer, int length)
   }
 
   //Max size is 2 * length because byte stuffing doubles size
-  data.fieldD = (unsigned char *)malloc(sizeof(unsigned char)*length);
+  data.fieldD = (unsigned char *)malloc(sizeof(unsigned char)*length*2);
 
   data.bcc2StufSize = BCC2Stufying(data.fieldBCC2);
   data.dataStufSize = dataStuffing(buffer, length, data.fieldD);
@@ -1429,11 +1466,8 @@ unsigned int dataStuffing(unsigned char *data, int length, unsigned char *fieldD
 
   for (int i = 0; i < length; i++)
   {
-
-    data[i + pos] = data[i];
-
     if (data[i] == FLAG)
-    {
+     {
       fieldD[i] = ESC;
       pos++;
       fieldD[i + pos] = ESC_FLAG;
@@ -1444,6 +1478,11 @@ unsigned int dataStuffing(unsigned char *data, int length, unsigned char *fieldD
       fieldD[i] = ESC;
       pos++;
       fieldD[i + pos] = ESC_ESC;
+
+    }
+    else{
+      
+      fieldD[i+pos]=data[i];
     }
   }
 

@@ -50,7 +50,10 @@ int main(int argc, char** argv)
     }
 
 
+
     sleep(3); //Resolve bug de receber lixo
+
+    llread(fd,buf);
 
 
     if(llclose(fd,FLAG_LL_CLOSE_RECEIVER_DISC)!=LL_CLOSE_SUCESS){
