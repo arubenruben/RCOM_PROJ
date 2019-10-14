@@ -32,9 +32,9 @@ typedef struct {
 
 /**
 * ...description...
-* @param {...} porta
-* @param {...} flag
-* @return {...} 
+* @param {...} port_number
+* @param {TRANSMITTER/RECEIVER} flag
+* @return {...} file descriptor on sucess, -1 otherwise
 */
 int llopen(int port_number, int flag);
 
@@ -43,7 +43,7 @@ int llopen(int port_number, int flag);
 * @param {file descriptor} fd
 * @param {...} buffer
 * @param {...} length
-* @return {...} 
+* @return {...} number of bytes written on success, 0 otherwise
 */
 int llwrite(int fd, unsigned char * buffer, int length);
 
@@ -51,15 +51,15 @@ int llwrite(int fd, unsigned char * buffer, int length);
 * ...description...
 * @param {file descriptor} fd
 * @param {...} buffer
-* @return {...} 
+* @return {...} buffer size on success, 0 therwise
 */
 int llread(int fd, unsigned char * buffer);
 
 /**
 * ...description...
 * @param {file descriptor} fd
-* @param {...} flag
-* @return {...} 
+* @param {TRANSMITTER/RECEIVER} flag
+* @return {...} 1 on sucsess, negativo value otherwise 
 */
 int llclose(int fd, int flag);
 
