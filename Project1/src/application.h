@@ -59,7 +59,7 @@ int sendDataBlock(int fd, uint sequenceNumber, char* buffer, uint length);
 * @param {returns data block received} buffer
 * @return {...} length of block received on success, -1 otherwise
 */
-int receiveDataBlock(int fd, int *sequenceNumber, char *buffer);
+int receiveDataBlock(int fd, uint *sequenceNumber, char *buffer);
 
 /**
 * Assemble and send control block

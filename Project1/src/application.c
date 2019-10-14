@@ -22,7 +22,7 @@ int sendDataBlock(int fd, uint sequenceNumber, char *buffer, uint length) {
     return 0;
 }
 
-int receiveDataBlock(int fd, int *sequenceNumber, char *buffer) {
+int receiveDataBlock(int fd, uint *sequenceNumber, char *buffer) {
     AppDataStruct data;
     uint length;
 
@@ -116,7 +116,7 @@ int receiveControlBlock(int fd, uint *type , char *fileName) {
 int main(int argc, char* argv[]) {
 
     if(argc != 3) {
-        printf("Usage:\tex: ./a.out textName.txt\n");
+        printf("Usage:\tex: \t./a.out \t\"name\".txt \t0\n");
         exit(1);
     }
 

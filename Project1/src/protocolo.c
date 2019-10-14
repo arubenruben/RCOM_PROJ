@@ -15,7 +15,7 @@ static int n_tries = MAX_RETR;
 
 DataStruct *pointer_to_data=NULL;
 
-DataStruct createMessage(unsigned int sequenceNumber, char *buffer, int length);
+DataStruct createMessage(unsigned int sequenceNumber, unsigned char *buffer, int length);
 unsigned int BCC2Stufying(unsigned char *BCC2);
 unsigned int dataStuffing(unsigned char *data, int length, unsigned char *fieldD);
 
@@ -1156,7 +1156,7 @@ int llopen(int port_number, int flag)
 
 */
 
-int llwrite(int fd, char *buffer, int length)
+int llwrite(int fd, unsigned char *buffer, int length)
 {
 
 
@@ -1246,7 +1246,7 @@ Se nova -> Passo a app e envio a app
 
 
 
-int llread(int fd, char *buffer)
+int llread(int fd, unsigned char *buffer)
 {
   static unsigned int r = 0;
 
@@ -1433,7 +1433,7 @@ int llread(int fd, char *buffer)
   return size_buffer - 1;
 }
 
-DataStruct createMessage(unsigned int sequenceNumber, char *buffer, int length)
+DataStruct createMessage(unsigned int sequenceNumber, unsigned char *buffer, int length)
 {
 
   DataStruct data;

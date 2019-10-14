@@ -39,23 +39,23 @@ int llopen(int port_number, int flag);
 
 /**
 * ...description...
-* @param {...} fd
+* @param {file descriptor} fd
 * @param {...} buffer
 * @param {...} length
 */
-int llwrite(int fd, char * buffer, int length);
+int llwrite(int fd, unsigned char * buffer, int length);
 
 /**
 * ...description...
-* @param {...} fd
+* @param {file descriptor} fd
 * @param {...} buffer
 */
-int llread(int fd, char * buffer);
+int llread(int fd, unsigned char * buffer);
 
 /**
 * ...description...
-* @param {...} fd
+* @param {file descriptor} fd
 */
-int llclose(int fd,int flag);
+int llclose(int fd, int flag);
 
 

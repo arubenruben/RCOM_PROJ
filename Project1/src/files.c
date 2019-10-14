@@ -81,7 +81,7 @@ int receiveFile() {
         return -1;
     }
 
-    uint sequenceNumber = 0, length = 0, totalLength = 0;
+    uint sequenceNumber, length = 0, totalLength = 0;
     char buffer[MAX_BUF];
 
     while(totalLength != fileSize) {
@@ -101,7 +101,6 @@ int receiveFile() {
 
     }
 
-
     if(fclose(file) != 0) {
         printf("Error while closing file!\n");
         return -1;
@@ -109,19 +108,21 @@ int receiveFile() {
 
     // Receive control block - END
     if(receiveControlBlock(fd, &controlType, fileName) < 0) {
-        printf("Error in sendControlBlock!\n");
+        printf("Error in receiveControlBlock!\n");
         return -1;
-        
-        if(controlType != End) {
-            printf("controlType value is not END\n");
-            return -1;
-        }
+    }
+
+    if(controlType != End) {
+        printf("controlType value is not END\n");
+        return -1;
     }
 
     if(llclose(fd, FLAG_LL_CLOSE_TRANSMITTER) != 0) {
         printf("Error in llclose!\n");
         return -1;
     }
+
+    return 0;
 }
 
 int fileSize(FILE *fp) {
