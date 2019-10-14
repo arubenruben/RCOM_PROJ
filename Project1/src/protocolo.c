@@ -1383,7 +1383,7 @@ int llread(int fd, unsigned char *buffer)
 
         case ST_ESC_RCV:
         {
-          if (buf[size_buf] != ESC_FLAG & buf[size_buf] != ESC_ESC)
+          if ((buf[size_buf] != ESC_FLAG) & (buf[size_buf] != ESC_ESC))
             error = true;
 
           state = ST_BCC_OK;

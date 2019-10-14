@@ -2,7 +2,7 @@
 #include "application.h"
 #include "files.h"
 
-int sendDataBlock(int fd, uint sequenceNumber, char *buffer, uint length) {
+int sendDataBlock(int fd, uint sequenceNumber, uchar *buffer, uint length) {
     AppDataStruct data;
 
     // Create AppDataStruct
@@ -14,7 +14,7 @@ int sendDataBlock(int fd, uint sequenceNumber, char *buffer, uint length) {
     data.length = length + 4;
 
     // Write AppDataStruct to Data Link layer
-    if(llwrite(fd, (char*)&data, data.length) < 0) {
+    if(llwrite(fd, (uchar*)&data, data.length) < 0) {
         printf("Error while writing data block to Data Link layer!\n");
         return -1;
     }
@@ -22,12 +22,12 @@ int sendDataBlock(int fd, uint sequenceNumber, char *buffer, uint length) {
     return 0;
 }
 
-int receiveDataBlock(int fd, uint *sequenceNumber, char *buffer) {
+int receiveDataBlock(int fd, uint *sequenceNumber, uchar *buffer) {
     AppDataStruct data;
     uint length;
 
     // Read block from Data Link layer
-    if(llread(fd, (char*)&data) < 0) {
+    if(llread(fd, (uchar*)&data) < 0) {
         printf("Error while reading data block from Data Link layer!\n");
         return -1;
     }
@@ -43,7 +43,7 @@ int receiveDataBlock(int fd, uint *sequenceNumber, char *buffer) {
     *sequenceNumber = data.fieldN;
 
     // Allocates memory for buffer and does a copy of data from block received
-    buffer = (char *)malloc(sizeof(char) * length);
+    buffer = (uchar *)malloc(sizeof(char) * length);
     memcpy(buffer, data.fieldP, length);
 
     return length;
@@ -57,8 +57,8 @@ int sendControlBlock(int fd, int fieldC, int fileSize, char *fileName) {
     sprintf(fileSizeString, "%d", fileSize);
     
     // Alocates memory value in TLV message
-    control.fileSize.value = (char*)malloc(sizeof(char) * strlen(fileSizeString));
-    control.fileName.value = (char*)malloc(sizeof(char) * strlen(fileName));
+    control.fileSize.value = (uchar*)malloc(sizeof(uchar) * strlen(fileSizeString));
+    control.fileName.value = (uchar*)malloc(sizeof(uchar) * strlen(fileName));
 
 
     // Create AppControlStruct
@@ -77,7 +77,7 @@ int sendControlBlock(int fd, int fieldC, int fileSize, char *fileName) {
     control.length = strlen(fileSizeString) + strlen(fileName) + 5;
 
    // Write AppControlStruct to Data Link layer
-    if(llwrite(fd, (char*)&control, control.length) < 0) {
+    if(llwrite(fd, (uchar*)&control, control.length) < 0) {
         printf("Error while writing fileSize to Data Link layer!\n");
         return -1;
     }
@@ -88,7 +88,7 @@ int receiveControlBlock(int fd, uint *type , char *fileName) {
     AppControlStruct control;
 
     // Read block from Data Link layer
-    if(llread(fd, (char*)&control) < 0) {
+    if(llread(fd, (uchar*)&control) < 0) {
         printf("Error while reading control block from Data Link layer!\n");
         return -1;
     }

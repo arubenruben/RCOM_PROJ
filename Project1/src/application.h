@@ -22,7 +22,7 @@ typedef enum {
 typedef struct {
     Type type;
     uchar length;
-    char *value;
+    uchar *value;
 } TLV;
 
 typedef struct {
@@ -30,7 +30,7 @@ typedef struct {
     uchar fieldN;
     uchar fieldL2;
     uchar fieldL1;
-    char *fieldP;
+    uchar *fieldP;
     uchar length;
 } AppDataStruct;
 
@@ -50,7 +50,7 @@ typedef struct {
 * @param {data length} length
 * @return {...} 0 on success, -1 otherwise
 */
-int sendDataBlock(int fd, uint sequenceNumber, char* buffer, uint length);
+int sendDataBlock(int fd, uint sequenceNumber, uchar *buffer, uint length);
 
 /**
 * Receives data block and processes it
@@ -59,7 +59,7 @@ int sendDataBlock(int fd, uint sequenceNumber, char* buffer, uint length);
 * @param {returns data block received} buffer
 * @return {...} length of block received on success, -1 otherwise
 */
-int receiveDataBlock(int fd, uint *sequenceNumber, char *buffer);
+int receiveDataBlock(int fd, uint *sequenceNumber, uchar *buffer);
 
 /**
 * Assemble and send control block
