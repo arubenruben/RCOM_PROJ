@@ -23,7 +23,7 @@ int main(int argc, char** argv)
     int fd,c, res=0;
     int porta;
     struct termios oldtio,newtio;
-    char buf[255]="Ola Ruben Almeida", buf_receive[255];
+    char buf[255]="\n\n\n\n\nVIVA O FUTEBOL CLUBE DO PORTO\n\n\n\n\n\n", buf_receive[255];
     int i, sum = 0, speed = 0;
 
     if ( (argc < 2) ||
@@ -54,12 +54,11 @@ int main(int argc, char** argv)
 
 
     llwrite(fd,buf,strlen(buf));
-/*
+
     if(llclose(fd,FLAG_LL_CLOSE_TRANSMITTER_DISC)!=LL_CLOSE_SUCESS){
       printf("O LL close retornou erro\n");
       return -1;
     }
-*/
-    sleep(10);
+
     return 0;
 }

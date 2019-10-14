@@ -55,8 +55,7 @@ int main(int argc, char** argv)
 
     llread(fd,buf);
 
-    printf("Retornado: %s\n", buf);
-
+    printf("Recebi: %s\n",buf);
 
     if(llclose(fd,FLAG_LL_CLOSE_RECEIVER_DISC)!=LL_CLOSE_SUCESS){
       printf("Erro no llclose\n");

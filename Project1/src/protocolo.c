@@ -178,6 +178,8 @@ int checkBCC2(unsigned char *buffer, unsigned int size)
   unsigned char bcc = buffer[size - 1];
   unsigned char bcc_check = 0;
 
+
+  //Ate size n-1, por que o data vai estar em buffer entre [0,size-1]
   for (int i = 0; i < (size - 1); i++)
   {
     bcc_check ^= buffer[i];
@@ -212,15 +214,11 @@ int byteDeStuffing(unsigned char *dest, unsigned char *orig, unsigned int size_o
     size_dest++;
   }
 
-  dest[size_dest] = '\0';
-  printf("ByteStuffing: %s\n", dest);
-
   return size_dest;
 }
 
 int sendBlock(int flag, int fd)
 {
-  printf("Enviei:");
   
   unsigned char buf[BUF_SIZE + 1];
   
@@ -262,7 +260,6 @@ int sendBlock(int flag, int fd)
 
     if (flag==FLAG_LL_CLOSE_TRANSMITTER_DISC)
     {
-      printf("Preenchi com disc-- Ua\n");
       buf[C_INDEX] = C_DISC;
     }
     else if (flag==FLAG_LL_CLOSE_TRANSMITTER_UA)
@@ -319,9 +316,6 @@ int sendBlock(int flag, int fd)
 
     }else{
       printf("Retornei sucesso do ll_data_send\n");
-      for(int i=0;i<3;i++){
-        printf("%c:\n",pointer_to_data->fieldD[i]);
-      }
       return n_bytes;
     }
 
@@ -383,9 +377,7 @@ int readBlock(int flag, int fd)
 
   unsigned char leitura;
   unsigned int size = 0, state = ST_START;
-  printf("\nRecebi:\n");
-
-
+  
   if (flag == FLAG_LL_OPEN_RECEIVER || flag == FLAG_LL_OPEN_TRANSMITTER  || flag == FLAG_LL_CLOSE_TRANSMITTER_UA || flag == FLAG_LL_CLOSE_RECEIVER_DISC)
   {
 
@@ -395,7 +387,6 @@ int readBlock(int flag, int fd)
 
       if ((read(fd, &leitura, 1) != 0))
       {
-        printf("%x ",leitura);
       }
 
       switch (state)
@@ -528,7 +519,6 @@ int readBlock(int flag, int fd)
         if (leitura == FLAG)
         {
           //received all, stop cycle
-          printf("\nSucesso\n");
           return READ_SUCCESS;
         }
         else
@@ -551,7 +541,6 @@ int readBlock(int flag, int fd)
 
       if ((read(fd, &leitura, 1) != 0))
       {
-        printf("%x ",leitura);
       }
 
       switch (state)
@@ -638,7 +627,6 @@ int readBlock(int flag, int fd)
         if (leitura == FLAG)
         {
           //received all, stop cycle
-          printf("\nSucesso\n");
           return READ_SUCCESS;
         }
         else
@@ -664,7 +652,6 @@ int readBlock(int flag, int fd)
 
       if ((read(fd, &leitura, 1) != 0))
       {
-        printf("%x ",leitura);
       }
 
       switch (state)
@@ -751,7 +738,6 @@ int readBlock(int flag, int fd)
         if (leitura == FLAG)
         {
           //received all, stop cycle
-          printf("\nSucesso\n");
           return READ_SUCCESS;
         }
         else
@@ -775,7 +761,6 @@ int readBlock(int flag, int fd)
 
       if ((read(fd, &leitura, 1) != 0))
       {
-        printf("Li do receiver:%x\n ",leitura);
       }
 
       switch (state)
@@ -894,7 +879,6 @@ int readBlock(int flag, int fd)
         if (leitura == FLAG)
         {
           //received all, stop cycle
-          printf("\nSucesso\n");
           return READ_REJ_SUCESS;
         }
         else
@@ -907,7 +891,6 @@ int readBlock(int flag, int fd)
         if (leitura == FLAG)
         {
           //received all, stop cycle
-          printf("\nSucesso\n");
           return READ_RR_SUCESS;
         }
         else
@@ -932,7 +915,6 @@ int readBlock(int flag, int fd)
 
       if ((read(fd, &leitura, 1) != 0))
       {
-        printf("lI DE RESPOSTA DO receiver%x\n ",leitura);
       }
 
       switch (state)
@@ -998,7 +980,6 @@ int readBlock(int flag, int fd)
 
       case ST_C_RCV_REJ:
       {
-
         //received BCC, check BCC
 
         if (leitura == (A_CE_AR ^ C_REJ(1)))
@@ -1023,11 +1004,12 @@ int readBlock(int flag, int fd)
       case ST_C_RCV_RR:
       {
 
-        //received BCC, check BCC
-
         if (leitura == (A_CE_AR ^ C_RR(1)))
         {
+        
           state = ST_BCC_OK_RR;
+
+          break;
         }
 
         else if (leitura == FLAG)
@@ -1044,33 +1026,37 @@ int readBlock(int flag, int fd)
         break;
       }
 
-      case ST_BCC_OK_REJ:
+      case ST_BCC_OK_RR:{
 
-      
         //check FLAG byte
         if (leitura == FLAG)
         {
           //received all, stop cycle
-          printf("\nSucesso\n");
+          return READ_RR_SUCESS;
+        }
+        else
+          //received other, go to start
+          state = ST_START;
+        
+        
+        break;
+
+      }
+
+      case ST_BCC_OK_REJ:{
+
+        //check FLAG byte
+        if (leitura == FLAG)
+        {
+          //received all, stop cycle
           return READ_REJ_SUCESS;
         }
         else
           //received other, go to start
           state = ST_START;
         break;
-  
-      case ST_BCC_OK_RR:
-        //check FLAG byte
-        if (leitura == FLAG)
-        {
-          //received all, stop cycle
-          printf("\nSucesso\n");
-          return READ_RR_SUCESS;
-        }
-        else
-          //received other, go to start
-          state = ST_START;
-        break;
+      }
+
 
       default:
         state = ST_START;
@@ -1153,7 +1139,6 @@ int llopen(int port_number, int flag)
   }
 
   //LL open deve retornar identificador da ligacao de dados
-  printf("LLOpen completed\n");
   return fd;
 }
 
@@ -1194,9 +1179,8 @@ int llwrite(int fd, char *buffer, int length)
   }
 
   
-  while(ret_resposta=READ_FAIL||ret_resposta==READ_REJ_SUCESS){
-    printf("n vezes\n");
-
+  while(ret_resposta==READ_FAIL||ret_resposta==READ_REJ_SUCESS){
+    
     num_bytes=sendBlock(FLAG_LL_DATA_SEND,fd);
     
     if(num_bytes==WRITE_FAIL){
@@ -1231,7 +1215,6 @@ int llwrite(int fd, char *buffer, int length)
   sequenceNumber = (sequenceNumber + 1) % 2;
 
   return num_bytes;
-
   
 }
 
@@ -1315,8 +1298,6 @@ int llread(int fd, char *buffer)
         perror("Failled to read");
         return READ_FAIL;
       }
-
-      printf("%x\n",buf[size_buf]);
 
       //Go through state machine
       switch (state)
@@ -1431,6 +1412,8 @@ int llread(int fd, char *buffer)
       else
         sendBlock(FLAG_DATA_SENDING_ANSWER_RR_WITH0, fd);
     }
+
+    //Deu erro BCC2 vou enviar um REJ
     else{
         if(r)
         sendBlock(FLAG_DATA_SENDING_ANSWER_REJ_WITH1, fd);
@@ -1590,9 +1573,6 @@ int llclose(int fd, int flag)
   //Receiver block
   else if (flag == FLAG_LL_CLOSE_RECEIVER_DISC)
   {
-
-    printf("Estou aqui\n");
-
     if (signal(SIGALRM, alarm_handler_disc_signal) < 0)
     {
       perror("Erro a instalar o handler no LL_CLOSE, no receiver");
@@ -1643,8 +1623,6 @@ int llclose(int fd, int flag)
   {
     perror("Failled to close file");
   }
-
-  printf("LLCLOSE DONE\n");
 
   return LL_CLOSE_SUCESS;
 }
