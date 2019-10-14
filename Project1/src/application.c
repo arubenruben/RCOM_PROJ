@@ -12,7 +12,7 @@ int sendDataBlock(int fd, uint sequenceNumber, char *buffer, uint length) {
     memcpy(data.fieldP, buffer, length);
     data.length = length + 4;
 
-    // Write block to Data Link layer
+    // Write AppDataStruct to Data Link layer
     if(llwrite(fd, (char*)&data, data.length) < 0) {
         printf("Error while writing data block to Data Link layer!\n");
         return -1;
@@ -72,7 +72,7 @@ int sendControlBlock(int fd, int fieldC, int fileSize, char *fileName) {
     
     control.length = strlen(fileSize) + strlen(fileSize) + 5;
 
-   // Write FileSize
+   // Write AppControlStruct to Data Link layer
     if(llwrite(fd, (char*)&control, control.length) < 0) {
         printf("Error while writing fileSize to Data Link layer!\n");
         return -1;
