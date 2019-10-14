@@ -4,20 +4,88 @@
 
 int sendFile(char *fileName) {
     FILE* file = fopen(fileName, "rb");
-    //int fd = llopen
+    if(file == NULL) {
+        printf("Could not open %s!\n", fileName);
+        return -1;
+    }
+    
+    int fd = llopen(0, FLAG_LL_OPEN_TRANSMITTER);
+    if(fd < 0) {
+        printf("Error in llopen!\n");
+        return -1;
+    }
 
-    //send control package - START
+    // send control package - START
+    if(sendControlBlock(fd, Start, fileSize(file), fileName) < 0) {
+        printf("Error in sendControlBlock!\n");
+        return -1;
+    }
+
+    uint length, nBytes = 0, sequenceNumber = 0;
+    char buffer[MAX_BUF];
 
     // while reads file sendDataPackage
+    while((length = fread(buffer, sizeof(char), MAX_BUF, file)) != EOF) {
+        if(sendDataPackage(fd, sequenceNumber%255, buffer, length) != EOF) {
+            printf("Error in sendDataPackage!\n");
+            return -1;
+        }
+        sequenceNumber++;
+        nBytes += length;
+    }
 
     // closes (fclose, sendcontrol -END, llclose)
+    if(fclose(file) != 0) {
+        printf("Error while closing file!\n");
+        return -1;
+    }
+
+    // send control package - END
+    if(sendControlBlock(fd, End, fileSize(file), fileName) < 0) {
+        printf("Error in sendControlBlock!\n");
+        return -1;
+    }
+
+    if(llclose(fd, FLAG_LL_CLOSE_TRANSMITTER) != 0) {
+        printf("Error in llclose!\n");
+        return -1;
+    }
+
+    return nBytes;
 }
 
-int receiveFile() {
-    //int fd = llopen
+int receiveFile(char *fileName) {
+    int fd = llopen(0, FLAG_LL_OPEN_TRANSMITTER);
+    if(fd < 0) {
+        printf("Error in llopen!\n");
+        return -1;
+    }
+
+    uint controlType;
+
+    // receive control package - START
+    if(receiveControlBlock(fd, &controlType, fileName) < 0) {
+        printf("Error in sendControlBlock!\n");
+        return -1;
+        
+        if(controlType != Start) {
+            printf("controlType value is not START\n");
+            return -1;
+        }
+    }
 }
 
-int fileSize() {
-    //while fseek != null counter++..
+int fileSize(FILE *fp) {
+    uint counter = 0;
 
+    if(fp == NULL) {
+        printf("File pointer is NULL!\n");
+        return -1;
+    }
+    
+    while(fgetc(fp) != EOF) {
+        counter++;
+    }
+
+    return counter;
 }

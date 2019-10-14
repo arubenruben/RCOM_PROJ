@@ -64,7 +64,7 @@ int receiveDataBlock(int fd, int *sequenceNumber, char *buffer);
 * @param {TLV second message} fileName
 * @return {...} 0 on success, -1 otherwise
 */
-int sendControlBlock(int fd, int fieldC, char *fileSize, char *fileName);
+int sendControlBlock(int fd, int fieldC, int fileSize, char *fileName);
 
 /**
 * ...description...

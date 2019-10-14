@@ -48,7 +48,7 @@ int receiveDataBlock(int fd, int *sequenceNumber, char *buffer) {
     return length;
 }
 
-int sendControlBlock(int fd, int fieldC, char *fileSize, char *fileName) {
+int sendControlBlock(int fd, int fieldC, int fileSize, char *fileName) {
     AppControlStruct control;
     
     // Alocates memory value in TLV message
