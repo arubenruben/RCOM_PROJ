@@ -33,13 +33,13 @@ typedef struct {
 typedef struct {
     ControlField fieldC;
     uchar length;
-    TLV fileName;
     TLV fileSize;
+    TLV fileName;
 } AppControlStruct;
 
 
 /**
-* ...description...
+* Assemble and send data block
 * @param {file descriptor} fd
 * @param {sequence number (%255)} sequenceNumber
 * @param {data} buffer
@@ -49,7 +49,7 @@ typedef struct {
 int sendDataBlock(int fd, uint sequenceNumber, char* buffer, uint length);
 
 /**
-* ...description...
+* Receives data block and processes it
 * @param {file descriptor} fd
 * @param {returns sequence number (%255)} sequenceNumber
 * @param {returns data block received} buffer
@@ -58,7 +58,7 @@ int sendDataBlock(int fd, uint sequenceNumber, char* buffer, uint length);
 int receiveDataBlock(int fd, int *sequenceNumber, char *buffer);
 
 /**
-* ...description...
+* Assemble and send control block
 * @param {file descriptor} fd
 * @param {control field(START/END)} fieldC
 * @param {TLV first message} fileSize
@@ -68,7 +68,7 @@ int receiveDataBlock(int fd, int *sequenceNumber, char *buffer);
 int sendControlBlock(int fd, int fieldC, int fileSize, char *fileName);
 
 /**
-* ...description...
+* Receives control block and processes it
 * @param {file descriptor} fd
 * @param {returns control field(START/END)} type
 * @param {returns fileName} fileName
