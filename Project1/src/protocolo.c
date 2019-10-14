@@ -1249,8 +1249,6 @@ Se nova -> Passo a app e envio a app
 int llread(int fd, unsigned char *buffer)
 {
   static unsigned int r = 0;
-
-  
   
   unsigned int size_buf = 0, state = ST_START, max_size = MAX_BUF;
   bool error = false, end = false;

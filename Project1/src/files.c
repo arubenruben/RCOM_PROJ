@@ -22,7 +22,7 @@ int sendFile(char *fileName) {
     }
 
     uint length, nBytes = 0, sequenceNumber = 0;
-    char buffer[MAX_BUF];
+    uchar buffer[MAX_BUF];
 
     // While reads file sendDataPackage
     while((length = fread(buffer, sizeof(char), MAX_BUF, file)) != EOF) {
@@ -60,8 +60,8 @@ int receiveFile() {
         return -1;
     }
 
-    char *fileName;
-    uint fileSize, controlType;
+    char *fileName = NULL;
+    uint fileSize = 0, controlType;
 
     // Receive control block - START
     if((fileSize = receiveControlBlock(fd, &controlType, fileName)) < 0) {
@@ -82,7 +82,7 @@ int receiveFile() {
     }
 
     uint sequenceNumber, length = 0, totalLength = 0;
-    char buffer[MAX_BUF];
+    uchar buffer[MAX_BUF];
 
     while(totalLength != fileSize) {
         // Receive data block
