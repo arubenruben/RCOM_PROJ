@@ -60,11 +60,12 @@ int sendControlBlock(int fd, int fieldC, int fileSize, char *fileName) {
 
     // Create AppControlStruct
     control.fieldC = fieldC;
+    //FileSize
     control.fileSize.type = FileSize;
-    control.fileSize.length = strlen(fileSize);
-    for (uint i = 0; i < strlen(fileSize); i++)
-		control.fileSize.value[i] = fileSize[i];
-
+    control.fileSize.length = strlen(fileSizeString);
+    for (uint i = 0; i < strlen(fileSizeString); i++)
+		control.fileSize.value[i] = fileSizeString[i];
+    //FileName
     control.fileName.type = FileName;
     control.fileName.length = strlen(fileName);
     for (uint i = 0; i < strlen(fileName); i++)

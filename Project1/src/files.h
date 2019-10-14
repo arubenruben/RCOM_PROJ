@@ -9,10 +9,9 @@ int sendFile(char *fileName);
 
 /**
 * Receives file via application layer
-* @param {name of file do receive} fileName
 * @return {...} 0 on success, -1 otherwise
 */
-int receiveFile(char *fileName);
+int receiveFile();
 
 /**
 * Returns number of bytes of a file

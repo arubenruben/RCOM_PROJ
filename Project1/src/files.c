@@ -15,7 +15,7 @@ int sendFile(char *fileName) {
         return -1;
     }
 
-    // send control package - START
+    // Send control package - START
     if(sendControlBlock(fd, Start, fileSize(file), fileName) < 0) {
         printf("Error in sendControlBlock!\n");
         return -1;
@@ -24,7 +24,7 @@ int sendFile(char *fileName) {
     uint length, nBytes = 0, sequenceNumber = 0;
     char buffer[MAX_BUF];
 
-    // while reads file sendDataPackage
+    // While reads file sendDataPackage
     while((length = fread(buffer, sizeof(char), MAX_BUF, file)) != EOF) {
         if(sendDataPackage(fd, sequenceNumber%255, buffer, length) != EOF) {
             printf("Error in sendDataPackage!\n");
@@ -34,13 +34,12 @@ int sendFile(char *fileName) {
         nBytes += length;
     }
 
-    // closes (fclose, sendcontrol -END, llclose)
     if(fclose(file) != 0) {
         printf("Error while closing file!\n");
         return -1;
     }
 
-    // send control package - END
+    // Send control package - END
     if(sendControlBlock(fd, End, fileSize(file), fileName) < 0) {
         printf("Error in sendControlBlock!\n");
         return -1;
@@ -54,24 +53,18 @@ int sendFile(char *fileName) {
     return nBytes;
 }
 
-int receiveFile(char *fileName) {
-    FILE* file = fopen(fileName, "w");
-    if(file == NULL) {
-        printf("Could not open/create %s!\n", fileName);
-        return -1;
-    }
-
-
+int receiveFile() {
     int fd = llopen(0, FLAG_LL_OPEN_TRANSMITTER);
     if(fd < 0) {
         printf("Error in llopen!\n");
         return -1;
     }
 
-    uint controlType, sequenceNumber = 0;
+    char *fileName;
+    uint fileSize, controlType;
 
-    // receive control block - START
-    if(receiveControlBlock(fd, &controlType, fileName) < 0) {
+    // Receive control block - START
+    if((fileSize = receiveControlBlock(fd, &controlType, fileName)) < 0) {
         printf("Error in sendControlBlock!\n");
         return -1;
         
@@ -81,11 +74,52 @@ int receiveFile(char *fileName) {
         }
     }
 
+    //w: Create if does not exist / erase if exists
+    FILE* file = fopen(fileName, "w");
+    if(file == NULL) {
+        printf("Could not open/create %s!\n", fileName);
+        return -1;
+    }
+
+    uint sequenceNumber = 0, length = 0, totalLength = 0;
     char buffer[MAX_BUF];
 
-    // receive data block - DATA
-    if(receiveDataBlock(fd, &sequenceNumber, buffer) != 0) {
-        printf("Error in receiveDataBlock!\n");
+    while(totalLength != fileSize) {
+        // Receive data block
+        if((length = receiveDataBlock(fd, &sequenceNumber, buffer)) != 0) {
+            printf("Error in receiveDataBlock!\n");
+            return -1;
+        }
+
+        totalLength += length;
+
+        // Writes data block
+        if(fwrite(buffer, sizeof(char), length, file) != length) {
+            printf("Error while writing to output file!\n");
+            return -1;
+        }
+
+    }
+
+
+    if(fclose(file) != 0) {
+        printf("Error while closing file!\n");
+        return -1;
+    }
+
+    // Receive control block - END
+    if(receiveControlBlock(fd, &controlType, fileName) < 0) {
+        printf("Error in sendControlBlock!\n");
+        return -1;
+        
+        if(controlType != End) {
+            printf("controlType value is not END\n");
+            return -1;
+        }
+    }
+
+    if(llclose(fd, FLAG_LL_CLOSE_TRANSMITTER) != 0) {
+        printf("Error in llclose!\n");
         return -1;
     }
 }
