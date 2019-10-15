@@ -4,6 +4,7 @@
 
 int sendDataBlock(int fd, uint sequenceNumber, uchar *buffer, uint length) {
     AppDataStruct data;
+    data.fieldP = (uchar*)malloc(sizeof(uchar)*length);
 
     // Create AppDataStruct
     data.fieldC = Data;
@@ -60,7 +61,6 @@ int sendControlBlock(int fd, int fieldC, int fileSize, char *fileName) {
     control.fileSize.value = (uchar*)malloc(sizeof(uchar) * strlen(fileSizeString));
     control.fileName.value = (uchar*)malloc(sizeof(uchar) * strlen(fileName));
 
-
     // Create AppControlStruct
     control.fieldC = fieldC;
     //FileSize
@@ -81,6 +81,7 @@ int sendControlBlock(int fd, int fieldC, int fileSize, char *fileName) {
         printf("Error while writing fileSize to Data Link layer!\n");
         return -1;
     }
+
     return 0;
 }
 
