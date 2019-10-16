@@ -188,11 +188,11 @@ int checkBCC2(unsigned char *buffer, unsigned int size)
   return bcc == bcc_check;
 }
 
-int byteDeStuffing(unsigned char *dest, unsigned char *orig, unsigned int size_orig)
+int byteDeStuffing(unsigned char *buf, unsigned int size_orig)
 {
   int size_dest = 0;
 
-  if (dest == NULL)
+  if (buf == NULL)
   {
     perror("Failled to allocate memory");
     exit(NO_MEM);
@@ -200,16 +200,16 @@ int byteDeStuffing(unsigned char *dest, unsigned char *orig, unsigned int size_o
 
   for (int i = DATA_START_INDEX; i < (size_orig - 1); i++)
   {
-    if (orig[i] == ESC)
+    if (buf[i] == ESC)
     {
       i++;
-      if (orig[i] == ESC_FLAG)
-        dest[size_dest] = FLAG;
+      if (buf[i] == ESC_FLAG)
+        buf[size_dest] = FLAG;
       else
-        dest[size_dest] = ESC;
+        buf[size_dest] = ESC;
     }
     else
-      dest[size_dest] = orig[i];
+      buf[size_dest] = buf[i];
 
     size_dest++;
   }
@@ -315,7 +315,6 @@ int sendBlock(int flag, int fd)
       return WRITE_FAIL;
 
     }else{
-      printf("Retornei sucesso do ll_data_send\n");
       return n_bytes;
     }
 
@@ -1290,7 +1289,7 @@ int llread(int fd, unsigned char *buffer)
       }
 
       //Read byte
-      if (!read(fd, &buf[size_buf], 1))
+      if (read(fd, &buf[size_buf], 1) <= 0)
       {
         free(buf);
         perror("Failled to read");
@@ -1393,10 +1392,10 @@ int llread(int fd, unsigned char *buffer)
     if (!error)
     {
       //Byte destuffing, returns size of buffer
-      size_buffer = byteDeStuffing(buffer, buf, size_buf);
+      size_buffer = byteDeStuffing(buf, size_buf);
 
       //Check BCC2
-      if (checkBCC2(buffer, size_buffer))
+      if (checkBCC2(buf, size_buffer))
       {
         r = (r + 1) % 2;
         end = true;
@@ -1423,11 +1422,11 @@ int llread(int fd, unsigned char *buffer)
     state = ST_D;
   }
 
+
+  memcpy(buffer,buf,size_buffer-1);
+
   //Free read buf
   free(buf);
-
-  buffer[size_buffer - 1] = '\0';
-
   return size_buffer - 1;
 }
 

@@ -18,4 +18,4 @@ int receiveFile();
 * @param {filepointer} fp
 * @return {...} number of bytes on success, -1 otherwise
 */
-int fileSize(FILE *fp);
+uint fileSize(FILE *fp);

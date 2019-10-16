@@ -3,7 +3,7 @@
 #include "files.h"
 
 int sendFile(char *fileName) {
-
+    uint size_file;
     FILE* file = fopen(fileName, "rb");
     if(file == NULL) {
         printf("Could not open %s!\n", fileName);
@@ -16,20 +16,25 @@ int sendFile(char *fileName) {
         return -1;
     }
 
+    size_file = fileSize(file);
     // Send control package - START
-    if(sendControlBlock(fd, Start, fileSize(file), fileName) < 0) {
+    if(sendControlBlock(fd, Start, size_file, fileName) < 0) {
         printf("Error in sendControlBlock!\n");
         return -1;
     }
-
-    printf("3\n");
 
     uint length, nBytes = 0, sequenceNumber = 0;
     uchar buffer[MAX_BUF];
 
     // While reads file sendDataPackage
-    while((length = fread(buffer, sizeof(char), MAX_BUF, file)) != EOF) {
-        if(sendDataBlock(fd, sequenceNumber%255, buffer, length) != EOF) {
+    while(nBytes != size_file) {
+        length = fread(buffer, sizeof(char), MAX_BUF, file);
+        if(length < 0){
+            perror("Failled to read from file");
+            return -1;
+        }
+
+        if(sendDataBlock(fd, sequenceNumber%255, buffer, length) == EOF) {
             printf("Error in sendDataPackage!\n");
             return -1;
         }
@@ -37,26 +42,21 @@ int sendFile(char *fileName) {
         nBytes += length;
     }
 
-    printf("4\n");
-
     if(fclose(file) != 0) {
         printf("Error while closing file!\n");
         return -1;
     }
 
     // Send control package - END
-    if(sendControlBlock(fd, End, fileSize(file), fileName) < 0) {
+    if(sendControlBlock(fd, End, size_file, fileName) < 0) {
         printf("Error in sendControlBlock!\n");
         return -1;
     }
 
-    printf("5\n");
-
-    if(llclose(fd, FLAG_LL_CLOSE_TRANSMITTER) != 0) {
+    if(llclose(fd, FLAG_LL_CLOSE_TRANSMITTER_DISC) != LL_CLOSE_SUCESS) {
         printf("Error in llclose!\n");
         return -1;
     }
-    printf("6\n");
 
     return nBytes;
 }
@@ -68,23 +68,19 @@ int receiveFile() {
         return -1;
     }
 
-    printf("1\n");
-
-    char *fileName = NULL;
+    char fileName[MAX_BUF];
     uint fileSize = 0, controlType;
 
     // Receive control block - START
     if((fileSize = receiveControlBlock(fd, &controlType, fileName)) < 0) {
         printf("Error in sendControlBlock!\n");
         return -1;
-        
-        if(controlType != Start) {
-            printf("controlType value is not START\n");
-            return -1;
-        }
     }
 
-    printf("2\n");
+    if(controlType != Start) {
+        printf("controlType value is not START\n");
+        return -1;
+    }
 
     //w: Create if does not exist / erase if exists
     FILE* file = fopen(fileName, "w");
@@ -92,8 +88,6 @@ int receiveFile() {
         printf("Could not open/create %s!\n", fileName);
         return -1;
     }
-
-    printf("3\n");
 
     uint sequenceNumber, length = 0, totalLength = 0;
     uchar buffer[MAX_BUF];
@@ -115,8 +109,6 @@ int receiveFile() {
 
     }
 
-    printf("4\n");
-
     if(fclose(file) != 0) {
         printf("Error while closing file!\n");
         return -1;
@@ -128,24 +120,22 @@ int receiveFile() {
         return -1;
     }
 
-    printf("5\n");
+     printf("1\n");
 
     if(controlType != End) {
         printf("controlType value is not END\n");
         return -1;
     }
 
-    if(llclose(fd, FLAG_LL_CLOSE_TRANSMITTER) != 0) {
+    if(llclose(fd, FLAG_LL_CLOSE_RECEIVER_DISC) != LL_CLOSE_SUCESS) {
         printf("Error in llclose!\n");
         return -1;
     }
 
-    printf("6\n");
-
     return 0;
 }
 
-int fileSize(FILE *fp) {
+uint fileSize(FILE *fp) {
     uint counter = 0;
 
     if(fp == NULL) {

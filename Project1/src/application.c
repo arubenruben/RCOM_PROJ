@@ -4,7 +4,6 @@
 
 int sendDataBlock(int fd, uint sequenceNumber, uchar *buffer, uint length) {
     AppDataStruct data;
-    data.fieldP = (uchar*)malloc(sizeof(uchar)*length);
 
     // Create AppDataStruct
     data.fieldC = Data;
@@ -12,10 +11,9 @@ int sendDataBlock(int fd, uint sequenceNumber, uchar *buffer, uint length) {
     data.fieldL2 = length / 256;
     data.fieldL1 = length % 256;
     memcpy(data.fieldP, buffer, length);
-    data.length = length + 4;
 
     // Write AppDataStruct to Data Link layer
-    if(llwrite(fd, (uchar*)&data, data.length) < 0) {
+    if(llwrite(fd, (uchar*)&data, sizeof(AppDataStruct)) < 0) {
         printf("Error while writing data block to Data Link layer!\n");
         return -1;
     }
@@ -26,6 +24,11 @@ int sendDataBlock(int fd, uint sequenceNumber, uchar *buffer, uint length) {
 int receiveDataBlock(int fd, uint *sequenceNumber, uchar *buffer) {
     AppDataStruct data;
     uint length;
+
+    if(buffer == NULL) {
+        printf("Received buffer is NULL!\n");
+        return -1;
+    }
 
     // Read block from Data Link layer
     if(llread(fd, (uchar*)&data) < 0) {
@@ -39,45 +42,41 @@ int receiveDataBlock(int fd, uint *sequenceNumber, uchar *buffer) {
         return -1;
     }
 
-    length = 256 * data.fieldL2 + data.fieldL1;
-
     *sequenceNumber = data.fieldN;
+    length = data.fieldL2 * 256 + data.fieldL1;
 
-    // Allocates memory for buffer and does a copy of data from block received
-    buffer = (uchar *)malloc(sizeof(char) * length);
+    // Does a copy of data from block received
     memcpy(buffer, data.fieldP, length);
 
     return length;
 }
 
-int sendControlBlock(int fd, int fieldC, int fileSize, char *fileName) {
+int sendControlBlock(int fd, int fieldC, uint fileSize, char *fileName) {
     AppControlStruct control;
-    
+
     // Converts fileSize to char* to send via TLV struct
-    char fileSizeString[15];
+    char fileSizeString[64];
     sprintf(fileSizeString, "%d", fileSize);
-    
-    // Alocates memory value in TLV message
-    control.fileSize.value = (uchar*)malloc(sizeof(uchar) * strlen(fileSizeString));
-    control.fileName.value = (uchar*)malloc(sizeof(uchar) * strlen(fileName));
 
     // Create AppControlStruct
     control.fieldC = fieldC;
+    
     //FileSize
     control.fileSize.type = FileSize;
     control.fileSize.length = strlen(fileSizeString);
     for (uint i = 0; i < strlen(fileSizeString); i++)
 		control.fileSize.value[i] = fileSizeString[i];
+    
     //FileName
     control.fileName.type = FileName;
     control.fileName.length = strlen(fileName);
     for (uint i = 0; i < strlen(fileName); i++)
 		control.fileName.value[i] = fileName[i];
-    
-    control.length = strlen(fileSizeString) + strlen(fileName) + 5;
+    control.fileName.value[strlen(fileName)] = '\0';
+    control.fileName.length++;
 
    // Write AppControlStruct to Data Link layer
-    if(llwrite(fd, (uchar*)&control, control.length) < 0) {
+    if(llwrite(fd, (uchar*)&control, sizeof(AppControlStruct)) < 0) {
         printf("Error while writing fileSize to Data Link layer!\n");
         return -1;
     }
@@ -88,11 +87,18 @@ int sendControlBlock(int fd, int fieldC, int fileSize, char *fileName) {
 int receiveControlBlock(int fd, uint *type , char *fileName) {
     AppControlStruct control;
 
-    // Read block from Data Link layer
+    if(fileName == NULL) {
+        printf("Received fileName is NULL\n");
+        return -1;
+    }
+
     if(llread(fd, (uchar*)&control) < 0) {
         printf("Error while reading control block from Data Link layer!\n");
         return -1;
     }
+
+    // Control block type
+    *type = control.fieldC;
 
     // Checks if block is a control block
     if (control.fieldC != Start && control.fieldC != End) {
@@ -100,18 +106,11 @@ int receiveControlBlock(int fd, uint *type , char *fileName) {
         return -1;
     }
 
-    // Control block type
-    *type = control.fieldC;
-
-    // FileSize
-    char *size = (char *)malloc(sizeof(char) * control.fileSize.length);
-    memcpy(size, control.fileSize.value, control.fileSize.length);
-
     // FileName
     memcpy(fileName, control.fileName.value, control.fileName.length);
-
+    
     // Returns FileSize
-    return atoi(size);
+    return atoi((char*)control.fileSize.value);
 }
 
 int main(int argc, char* argv[]) {
@@ -121,10 +120,12 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
-    char filename[MAX_BUF];
-    strcpy(filename, argv[2]);
+    char* filename = argv[1];
+    if(filename == NULL){
+        printf("Referencia para o filename invalida\n");
+    }
 
-    switch (atoi(argv[1])) 
+    switch (atoi(argv[2])) 
     {
         case Receiver:
             if(receiveFile() != 0) {

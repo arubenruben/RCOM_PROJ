@@ -22,7 +22,7 @@ typedef enum {
 typedef struct {
     Type type;
     uchar length;
-    uchar *value;
+    uchar value[MAX_BUF];
 } TLV;
 
 typedef struct {
@@ -30,13 +30,11 @@ typedef struct {
     uchar fieldN;
     uchar fieldL2;
     uchar fieldL1;
-    uchar *fieldP;
-    uchar length;
+    uchar fieldP[MAX_BUF];
 } AppDataStruct;
 
 typedef struct {
     ControlField fieldC;
-    uchar length;
     TLV fileSize;
     TLV fileName;
 } AppControlStruct;
@@ -69,7 +67,7 @@ int receiveDataBlock(int fd, uint *sequenceNumber, uchar *buffer);
 * @param {TLV second message} fileName
 * @return {...} 0 on success, -1 otherwise
 */
-int sendControlBlock(int fd, int fieldC, int fileSize, char *fileName);
+int sendControlBlock(int fd, int fieldC, uint fileSize, char *fileName);
 
 /**
 * Receives control block and processes it
