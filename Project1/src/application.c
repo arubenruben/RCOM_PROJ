@@ -114,36 +114,53 @@ int receiveControlBlock(int fd, uint *type , char *fileName) {
 }
 
 int main(int argc, char* argv[]) {
+    int portNumb = 0;
 
-    if(argc != 3) {
-        printf("Usage:\tex: \t./a.out \t\"name\".txt \t0\n");
-        exit(1);
-    }
+    if(strcmp(argv[0], "./reader") == 0){
 
-    char* filename = argv[1];
-    if(filename == NULL){
-        printf("Referencia para o filename invalida\n");
-    }
-
-    switch (atoi(argv[2])) 
-    {
-        case Receiver:
-            if(receiveFile() != 0) {
-                printf("Error in receiveFile!\n");
-                return -1;
-            }
-            break;
-        
-        case Sender:
-            if(sendFile(filename) < 0) {
-                printf("Error in sendFile!\n");
-                return -1;
-            }
-            break;
-        
-        default:
-            printf("Error in second argument(0/1)!\n");
-            printf("Exiting...\n");
+        if(argc != 2){
+            printf("Invalid call to reader\n");
+            printf("Usage:\t./reader SerialPort\n\tex: ./reader 0\n");
             return -1;
+        }
+        portNumb = atoi(argv[1]);
+
+        if(portNumb != 0 && portNumb != 1){
+            printf("Error: Serial port must be either 0 or 1");
+            return -1;
+        }
+
+        if(receiveFile(portNumb) != 0) {
+            printf("Error in receiveFile!\n");
+            return -1;
+        }
     }
+    else if(strcmp(argv[0], "./writer") == 0){
+
+        if(argc != 3){
+            printf("Invalid call to reader\n");
+            printf("Usage:\t./reader SerialPort FileName\n\tex: ./reader 0 file.txt\n");
+            return -1;
+        }
+        portNumb = atoi(argv[1]);
+
+        if(portNumb != 0 && portNumb != 1){
+            printf("Error: Serial port must be either 0 or 1");
+            return -1;
+        }
+
+        char* filename = argv[2];
+        if(filename == NULL){
+            printf("File Name invalid\n");
+            return -1;
+        }
+
+        if(sendFile(portNumb, filename) < 0) {
+            printf("Error in sendFile!\n");
+            return -1;
+        }
+
+    }
+
+    return 0;
 }

@@ -2,7 +2,7 @@
 #include "application.h"
 #include "files.h"
 
-int sendFile(char *fileName) {
+int sendFile(int portNumber, char *fileName) {
     uint size_file;
     FILE* file = fopen(fileName, "rb");
     if(file == NULL) {
@@ -10,7 +10,7 @@ int sendFile(char *fileName) {
         return -1;
     }
     
-    int fd = llopen(0, FLAG_LL_OPEN_TRANSMITTER);
+    int fd = llopen(portNumber, FLAG_LL_OPEN_TRANSMITTER);
     if(fd < 0) {
         printf("Error in llopen!\n");
         return -1;
@@ -61,8 +61,8 @@ int sendFile(char *fileName) {
     return nBytes;
 }
 
-int receiveFile() {
-    int fd = llopen(0, FLAG_LL_OPEN_RECEIVER);
+int receiveFile(int portNumber) {
+    int fd = llopen(portNumber, FLAG_LL_OPEN_RECEIVER);
     if(fd < 0) {
         printf("Error in llopen!\n");
         return -1;
@@ -94,7 +94,7 @@ int receiveFile() {
 
     while(totalLength != fileSize) {
         // Receive data block
-        if((length = receiveDataBlock(fd, &sequenceNumber, buffer)) != 0) {
+        if((length = receiveDataBlock(fd, &sequenceNumber, buffer)) <= 0) {
             printf("Error in receiveDataBlock!\n");
             return -1;
         }
@@ -119,8 +119,6 @@ int receiveFile() {
         printf("Error in receiveControlBlock!\n");
         return -1;
     }
-
-     printf("1\n");
 
     if(controlType != End) {
         printf("controlType value is not END\n");

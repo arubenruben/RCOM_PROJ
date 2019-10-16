@@ -5,13 +5,13 @@
 * @param {name of file do send} fileName
 * @return {...} number of bytes written
 */
-int sendFile(char *fileName);
+int sendFile(int portNumb, char *fileName);
 
 /**
 * Receives file via application layer
 * @return {...} 0 on success, -1 otherwise
 */
-int receiveFile();
+int receiveFile(int portNumber);
 
 /**
 * Returns number of bytes of a file

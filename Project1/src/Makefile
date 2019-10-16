@@ -4,7 +4,6 @@ all:
 
 clean:
 	rm writer
-	rm reader
 
 valgrind: 
 	valgrind --leak-check=yes -v ./writer
