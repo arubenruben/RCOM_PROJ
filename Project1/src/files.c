@@ -3,6 +3,7 @@
 #include "files.h"
 
 int sendFile(char *fileName) {
+
     FILE* file = fopen(fileName, "rb");
     if(file == NULL) {
         printf("Could not open %s!\n", fileName);
@@ -21,6 +22,8 @@ int sendFile(char *fileName) {
         return -1;
     }
 
+    printf("3\n");
+
     uint length, nBytes = 0, sequenceNumber = 0;
     uchar buffer[MAX_BUF];
 
@@ -34,6 +37,8 @@ int sendFile(char *fileName) {
         nBytes += length;
     }
 
+    printf("4\n");
+
     if(fclose(file) != 0) {
         printf("Error while closing file!\n");
         return -1;
@@ -45,20 +50,25 @@ int sendFile(char *fileName) {
         return -1;
     }
 
+    printf("5\n");
+
     if(llclose(fd, FLAG_LL_CLOSE_TRANSMITTER) != 0) {
         printf("Error in llclose!\n");
         return -1;
     }
+    printf("6\n");
 
     return nBytes;
 }
 
 int receiveFile() {
-    int fd = llopen(0, FLAG_LL_OPEN_TRANSMITTER);
+    int fd = llopen(0, FLAG_LL_OPEN_RECEIVER);
     if(fd < 0) {
         printf("Error in llopen!\n");
         return -1;
     }
+
+    printf("1\n");
 
     char *fileName = NULL;
     uint fileSize = 0, controlType;
@@ -74,12 +84,16 @@ int receiveFile() {
         }
     }
 
+    printf("2\n");
+
     //w: Create if does not exist / erase if exists
     FILE* file = fopen(fileName, "w");
     if(file == NULL) {
         printf("Could not open/create %s!\n", fileName);
         return -1;
     }
+
+    printf("3\n");
 
     uint sequenceNumber, length = 0, totalLength = 0;
     uchar buffer[MAX_BUF];
@@ -101,6 +115,8 @@ int receiveFile() {
 
     }
 
+    printf("4\n");
+
     if(fclose(file) != 0) {
         printf("Error while closing file!\n");
         return -1;
@@ -112,6 +128,8 @@ int receiveFile() {
         return -1;
     }
 
+    printf("5\n");
+
     if(controlType != End) {
         printf("controlType value is not END\n");
         return -1;
@@ -121,6 +139,8 @@ int receiveFile() {
         printf("Error in llclose!\n");
         return -1;
     }
+
+    printf("6\n");
 
     return 0;
 }
