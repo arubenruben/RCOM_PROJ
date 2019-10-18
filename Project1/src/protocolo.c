@@ -159,6 +159,7 @@ void alarm_handler_data(int signo)
   
   if (n_tries > 0)
   {
+       printf("Fiz retransmissao\n");
     sendBlock(FLAG_LL_DATA_SEND,fd_for_handler);
 
     alarm(TIMEOUT);
@@ -322,13 +323,14 @@ int sendBlock(int flag, int fd)
   {
     int n_bytes=0;
 
+    n_bytes += write(fd, (char*)&pointer_to_data->flag, sizeof(pointer_to_data->flag));
+    n_bytes += write(fd,(char *)&pointer_to_data->fieldA, sizeof(pointer_to_data->fieldA));
+    n_bytes += write(fd, (char *)&pointer_to_data->fieldC, sizeof(pointer_to_data->fieldC));
+    n_bytes += write(fd, (char*) &pointer_to_data->fieldBCC1, sizeof(pointer_to_data->fieldBCC1));
 
-    printf("Fiz retransmissao\n");
-    
-    n_bytes += write(fd, pointer_to_data, 4);
     n_bytes += write(fd, pointer_to_data->fieldD, pointer_to_data->dataStufSize);
     n_bytes += write(fd, pointer_to_data->fieldBCC2, pointer_to_data->bcc2StufSize);
-    n_bytes += write(fd, &pointer_to_data->flag, 1);
+    n_bytes += write(fd, (char *)&pointer_to_data->flag, sizeof(pointer_to_data->flag));
   
     if(n_bytes != (pointer_to_data->bcc2StufSize + pointer_to_data->dataStufSize + 5)){
     
@@ -1311,9 +1313,7 @@ int llread(int fd, unsigned char *buffer)
           perror("Failled to allocate memory");
           exit(NO_MEM);
         }
-      }
-
-    
+      }    
       //Read byte para o buf
 
       if (read(fd, &buf[size_buf], 1) <= 0)
@@ -1420,17 +1420,20 @@ int llread(int fd, unsigned char *buffer)
       //Byte destuffing, returns size of buffer
       size_buffer = byteDeStuffing(buf, size_buf);
       
+      printf("Byte destufing retorna:%d\n",size_buffer);
+
       if(size_buffer<1){
         end=false;
 
       }else{
         //Caso em que da sucesso destuffing
         //Check BCC2
-        if (checkBCC2(buf, size_buffer)!=-1)
+        if (checkBCC2(buf, size_buffer)==1)
         {
           r = (r + 1) % 2;
           end = true;
         }else{
+          printf("Erro no bcc2\n");
           end=false;
         }
 
