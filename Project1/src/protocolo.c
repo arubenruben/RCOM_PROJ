@@ -173,24 +173,29 @@ void alarm_handler_data(int signo)
   return;
 }
 
-int checkBCC2(unsigned char *buffer, unsigned int size)
+int checkBCC2(unsigned char *buffer, int size)
 {
   unsigned char bcc = buffer[size - 1];
   unsigned char bcc_check = 0;
 
+  if(size<=1){
+    printf("Size mudou abrupotamente\n");
+    return -1;
+  }
 
   //Ate size n-1, por que o data vai estar em buffer entre [0,size-1]
   for (int i = 0; i < (size - 1); i++)
   {
+
     bcc_check ^= buffer[i];
   }
 
   return bcc == bcc_check;
 }
 
-int byteDeStuffing(unsigned char *buf, unsigned int size_orig)
+int byteDeStuffing(unsigned char *buf,  int size_orig)
 {
-  int size_dest = 0;
+  unsigned int size_dest = 0;
 
   if (buf == NULL)
   {
@@ -198,8 +203,15 @@ int byteDeStuffing(unsigned char *buf, unsigned int size_orig)
     exit(NO_MEM);
   }
 
+  if(size_orig<=1){
+    printf("O SIZE MUDOU ABRUPTAMENTE\n");
+      
+    return -1;
+  }
   for (int i = DATA_START_INDEX; i < (size_orig - 1); i++)
   {
+
+
     if (buf[i] == ESC)
     {
       i++;
@@ -208,8 +220,14 @@ int byteDeStuffing(unsigned char *buf, unsigned int size_orig)
       else
         buf[size_dest] = ESC;
     }
-    else
+    else if(buf[i]!=FLAG)
       buf[size_dest] = buf[i];
+
+    else if(buf[i]==FLAG){
+      printf("FLAG no sitio ERRADO\n REJ\n");
+      return 4;
+    }
+
 
     size_dest++;
   }
@@ -304,6 +322,9 @@ int sendBlock(int flag, int fd)
   {
     int n_bytes=0;
 
+
+    printf("Fiz retransmissao\n");
+    
     n_bytes += write(fd, pointer_to_data, 4);
     n_bytes += write(fd, pointer_to_data->fieldD, pointer_to_data->dataStufSize);
     n_bytes += write(fd, pointer_to_data->fieldBCC2, pointer_to_data->bcc2StufSize);
@@ -1244,12 +1265,15 @@ Se nova -> Passo a app e envio a app
 */
 
 
+//Buffer vai retornar a app
+
+//Intermedio um buf dinamico porque nao sei qual e o tamanho lido
 
 int llread(int fd, unsigned char *buffer)
 {
   static unsigned int r = 0;
-  
-  unsigned int size_buf = 0, state = ST_START, max_size = MAX_BUF;
+  int size_buf=0;
+  unsigned int state = ST_START, max_size = 2*MAX_BUF;
   bool error = false, end = false;
   unsigned char *buf = NULL;
   int size_buffer = 0;
@@ -1278,6 +1302,7 @@ int llread(int fd, unsigned char *buffer)
       //Check size
       if (size_buf > max_size)
       {
+        //Se tiver cheio, faco 2 x o buf
         max_size *= 2;
         buf = (unsigned char *)realloc((void *)buf, max_size * sizeof(unsigned char));
 
@@ -1288,7 +1313,9 @@ int llread(int fd, unsigned char *buffer)
         }
       }
 
-      //Read byte
+    
+      //Read byte para o buf
+
       if (read(fd, &buf[size_buf], 1) <= 0)
       {
         free(buf);
@@ -1370,7 +1397,6 @@ int llread(int fd, unsigned char *buffer)
 
         case ST_D:
         {
-
           if (buf[size_buf] == FLAG)
             state = ST_STOP;
           else if (buf[size_buf] == ESC)
@@ -1393,12 +1419,21 @@ int llread(int fd, unsigned char *buffer)
     {
       //Byte destuffing, returns size of buffer
       size_buffer = byteDeStuffing(buf, size_buf);
+      
+      if(size_buffer<1){
+        end=false;
 
-      //Check BCC2
-      if (checkBCC2(buf, size_buffer))
-      {
-        r = (r + 1) % 2;
-        end = true;
+      }else{
+        //Caso em que da sucesso destuffing
+        //Check BCC2
+        if (checkBCC2(buf, size_buffer)!=-1)
+        {
+          r = (r + 1) % 2;
+          end = true;
+        }else{
+          end=false;
+        }
+
       }
     }
 
@@ -1412,14 +1447,16 @@ int llread(int fd, unsigned char *buffer)
 
     //Deu erro BCC2 vou enviar um REJ
     else{
+        printf("Enviei um REJ\n");
+
         if(r)
         sendBlock(FLAG_DATA_SENDING_ANSWER_REJ_WITH1, fd);
       else
         sendBlock(FLAG_DATA_SENDING_ANSWER_REJ_WITH0, fd);
     }
 
-    size_buf = DATA_START_INDEX;
-    state = ST_D;
+    size_buf = 0;
+    state = ST_START;
   }
 
 

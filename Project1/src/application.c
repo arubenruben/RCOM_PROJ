@@ -125,7 +125,7 @@ int main(int argc, char* argv[]) {
         }
         portNumb = atoi(argv[1]);
 
-        if(portNumb != 0 && portNumb != 1){
+        if(portNumb != 0 && portNumb != 1&&portNumb!=2){
             printf("Error: Serial port must be either 0 or 1");
             return -1;
         }
@@ -144,7 +144,7 @@ int main(int argc, char* argv[]) {
         }
         portNumb = atoi(argv[1]);
 
-        if(portNumb != 0 && portNumb != 1){
+        if(portNumb != 0 && portNumb != 1&&portNumb!=2){
             printf("Error: Serial port must be either 0 or 1");
             return -1;
         }
