@@ -675,7 +675,7 @@ int readBlock(int flag, int fd)
       if ((read(fd, &leitura, 1) != 0))
       {
       }
-
+      
       switch (state)
       {
       case ST_START:
@@ -1186,23 +1186,19 @@ int llwrite(int fd, unsigned char *buffer, int length)
   static unsigned int sequenceNumber = 0;
   int num_bytes = 0;
   int ret_resposta=READ_FAIL;
-  n_tries=MAX_RETR;
 
   
   DataStruct data = createMessage(sequenceNumber, buffer, length);
   data.size_of_data_frame=sizeof(data);
   pointer_to_data=&data;
 
-
-  
-  if (signal(SIGALRM, alarm_handler_data) == SIG_ERR)
-  {
-    perror("Error in ignoring SIG ALARM handler");
-  }
-
-  
   while(ret_resposta==READ_FAIL||ret_resposta==READ_REJ_SUCESS){
     
+    if (signal(SIGALRM, alarm_handler_data) == SIG_ERR)
+    {
+      perror("Error in ignoring SIG ALARM handler");
+    }
+
     num_bytes=sendBlock(FLAG_LL_DATA_SEND,fd);
     
     if(num_bytes==WRITE_FAIL){
@@ -1210,6 +1206,7 @@ int llwrite(int fd, unsigned char *buffer, int length)
       return -1;
     }
 
+    n_tries=MAX_RETR;
     alarm(TIMEOUT);
     
     if(sequenceNumber==0){
@@ -1223,12 +1220,14 @@ int llwrite(int fd, unsigned char *buffer, int length)
 
     }
 
+    if (signal(SIGALRM, SIG_IGN) == SIG_ERR)
+    {
+        perror("Error in ignoring SIG ALARM handler");
+    }
+
+    alarm(0);
   }
 
-  if (signal(SIGALRM, SIG_IGN) == SIG_ERR)
-  {
-      perror("Error in ignoring SIG ALARM handler");
-  }
 
 
   free(data.fieldD);
@@ -1276,7 +1275,7 @@ int llread(int fd, unsigned char *buffer)
   static unsigned int r = 0;
   int size_buf=0;
   unsigned int state = ST_START, max_size = 2*MAX_BUF;
-  bool error = false, end = false;
+  bool end = false;
   unsigned char *buf = NULL;
   int size_buffer = 0;
 
@@ -1327,6 +1326,7 @@ int llread(int fd, unsigned char *buffer)
       switch (state)
       {
 
+
         case ST_START:
         {
 
@@ -1351,7 +1351,7 @@ int llread(int fd, unsigned char *buffer)
           }
 
           else
-            size_buf--;
+            size_buf = 1;
         }
 
         break;
@@ -1365,7 +1365,7 @@ int llread(int fd, unsigned char *buffer)
           else if (buf[size_buf] == FLAG)
           {
             state = ST_FLAG_RCV;
-            size_buf = 0;
+            size_buf = 1;
           }
 
           else
@@ -1385,7 +1385,7 @@ int llread(int fd, unsigned char *buffer)
           else if (buf[size_buf] == FLAG)
           {
             state = ST_FLAG_RCV;
-            size_buf -= 3;
+            size_buf = 1;
           }
           else
           {
@@ -1399,46 +1399,31 @@ int llread(int fd, unsigned char *buffer)
         {
           if (buf[size_buf] == FLAG)
             state = ST_STOP;
-          else if (buf[size_buf] == ESC)
-            state = ST_ESC_RCV;
         }
         break;
-
-        case ST_ESC_RCV:
-        {
-          if ((buf[size_buf] != ESC_FLAG) & (buf[size_buf] != ESC_ESC))
-            error = true;
-
-          state = ST_BCC_OK;
-        }
-        break;
-        }
-    }
-
-    if (!error)
-    {
-      //Byte destuffing, returns size of buffer
-      size_buffer = byteDeStuffing(buf, size_buf);
-      
-      printf("Byte destufing retorna:%d\n",size_buffer);
-
-      if(size_buffer<1){
-        end=false;
-
-      }else{
-        //Caso em que da sucesso destuffing
-        //Check BCC2
-        if (checkBCC2(buf, size_buffer)==1)
-        {
-          r = (r + 1) % 2;
-          end = true;
-        }else{
-          printf("Erro no bcc2\n");
-          end=false;
-        }
-
       }
     }
+
+    //Byte destuffing, returns size of buffer
+    size_buffer = byteDeStuffing(buf, size_buf);
+    
+    if(size_buffer<1){
+      end=false;
+
+    }else{
+      //Caso em que da sucesso destuffing
+      //Check BCC2
+      if (checkBCC2(buf, size_buffer)==1)
+      {
+        r = (r + 1) % 2;
+        end = true;
+      }else{
+        printf("Erro no bcc2\n");
+        end=false;
+      }
+
+    }
+    
 
     //Send acknowlegment
     if(end){
