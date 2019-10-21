@@ -15,7 +15,7 @@ static int n_tries = MAX_RETR;
 
 DataStruct *pointer_to_data=NULL;
 
-DataStruct createMessage(unsigned int sequenceNumber, unsigned char *buffer, int length);
+DataStruct *createMessage(unsigned int sequenceNumber, unsigned char *buffer, int length);
 unsigned int BCC2Stufying(unsigned char *BCC2);
 unsigned int dataStuffing(unsigned char *data, int length, unsigned char *fieldD);
 
@@ -323,14 +323,24 @@ int sendBlock(int flag, int fd)
   {
     int n_bytes=0;
 
-    n_bytes += write(fd, (char*)&pointer_to_data->flag, sizeof(pointer_to_data->flag));
-    n_bytes += write(fd,(char *)&pointer_to_data->fieldA, sizeof(pointer_to_data->fieldA));
-    n_bytes += write(fd, (char *)&pointer_to_data->fieldC, sizeof(pointer_to_data->fieldC));
-    n_bytes += write(fd, (char*) &pointer_to_data->fieldBCC1, sizeof(pointer_to_data->fieldBCC1));
+    n_bytes += write(fd, (unsigned char*)&pointer_to_data->flag, sizeof(pointer_to_data->flag));
+    printf("%x\n", pointer_to_data->flag);
+    n_bytes += write(fd,(unsigned char *)&pointer_to_data->fieldA, sizeof(pointer_to_data->fieldA));
+    printf("%x\n", pointer_to_data->fieldA);
+    n_bytes += write(fd, (unsigned char *)&pointer_to_data->fieldC, sizeof(pointer_to_data->fieldC));
+    printf("%x\n", pointer_to_data->fieldC);
+    n_bytes += write(fd, (unsigned char*) &pointer_to_data->fieldBCC1, sizeof(pointer_to_data->fieldBCC1));
+    printf("%x\n", pointer_to_data->fieldBCC1);
 
     n_bytes += write(fd, pointer_to_data->fieldD, pointer_to_data->dataStufSize);
+    for(int i = 0; i < pointer_to_data->dataStufSize; i++)
+      printf("%x\n", pointer_to_data->fieldD[i]);
     n_bytes += write(fd, pointer_to_data->fieldBCC2, pointer_to_data->bcc2StufSize);
-    n_bytes += write(fd, (char *)&pointer_to_data->flag, sizeof(pointer_to_data->flag));
+    for(int i = 0; i < pointer_to_data->bcc2StufSize; i++)
+      printf("%x\n", pointer_to_data->fieldBCC2[i]);
+    n_bytes += write(fd, (unsigned char *)&pointer_to_data->flag, sizeof(pointer_to_data->flag));
+    printf("%x\n", pointer_to_data->flag);
+
   
     if(n_bytes != (pointer_to_data->bcc2StufSize + pointer_to_data->dataStufSize + 5)){
     
@@ -675,7 +685,7 @@ int readBlock(int flag, int fd)
       if ((read(fd, &leitura, 1) != 0))
       {
       }
-      
+
       switch (state)
       {
       case ST_START:
@@ -1180,17 +1190,12 @@ int llopen(int port_number, int flag)
 
 int llwrite(int fd, unsigned char *buffer, int length)
 {
-
-
   //Nao esquecer que elas sao sempre cruzados envio 0 recebo 1. Comeco a 0
   static unsigned int sequenceNumber = 0;
   int num_bytes = 0;
   int ret_resposta=READ_FAIL;
 
-  
-  DataStruct data = createMessage(sequenceNumber, buffer, length);
-  data.size_of_data_frame=sizeof(data);
-  pointer_to_data=&data;
+  pointer_to_data = createMessage(sequenceNumber, buffer, length);
 
   while(ret_resposta==READ_FAIL||ret_resposta==READ_REJ_SUCESS){
     
@@ -1229,9 +1234,9 @@ int llwrite(int fd, unsigned char *buffer, int length)
   }
 
 
-
-  free(data.fieldD);
-  free(data.fieldBCC2);
+  free(pointer_to_data->fieldD);
+  free(pointer_to_data->fieldBCC2);
+  free(pointer_to_data);
 
   sequenceNumber = (sequenceNumber + 1) % 2;
 
@@ -1333,7 +1338,7 @@ int llread(int fd, unsigned char *buffer)
           if (buf[size_buf] == FLAG)
             state = ST_FLAG_RCV;
           else
-            size_buf = START_INDEX;
+            size_buf = -1;
         }
 
         break;
@@ -1347,11 +1352,11 @@ int llread(int fd, unsigned char *buffer)
           else if (buf[size_buf] != FLAG)
           {
             state = ST_START;
-            size_buf = START_INDEX;
+            size_buf = -1;
           }
 
           else
-            size_buf = 1;
+            size_buf = 0;
         }
 
         break;
@@ -1365,13 +1370,13 @@ int llread(int fd, unsigned char *buffer)
           else if (buf[size_buf] == FLAG)
           {
             state = ST_FLAG_RCV;
-            size_buf = 1;
+            size_buf = 0;
           }
 
           else
           {
             state = ST_START;
-            size_buf = START_INDEX;
+            size_buf = -1;
           }
         }
         break;
@@ -1385,12 +1390,12 @@ int llread(int fd, unsigned char *buffer)
           else if (buf[size_buf] == FLAG)
           {
             state = ST_FLAG_RCV;
-            size_buf = 1;
+            size_buf = 0;
           }
           else
           {
             state = ST_START;
-            size_buf = START_INDEX;
+            size_buf = -1;
           }
         }
         break;
@@ -1415,7 +1420,6 @@ int llread(int fd, unsigned char *buffer)
       //Check BCC2
       if (checkBCC2(buf, size_buffer)==1)
       {
-        r = (r + 1) % 2;
         end = true;
       }else{
         printf("Erro no bcc2\n");
@@ -1450,37 +1454,39 @@ int llread(int fd, unsigned char *buffer)
 
   memcpy(buffer,buf,size_buffer-1);
 
+  r = (r + 1) % 2;
+
   //Free read buf
   free(buf);
   return size_buffer - 1;
 }
 
-DataStruct createMessage(unsigned int sequenceNumber, unsigned char *buffer, int length)
+DataStruct *createMessage(unsigned int sequenceNumber, unsigned char *buffer, int length)
 {
 
-  DataStruct data;
-  data.flag = FLAG;
-  data.fieldA=A_CE_AR;
-  data.fieldC = C(sequenceNumber);
-  data.fieldBCC1 = data.fieldA ^ data.fieldC;
+  DataStruct *data = (DataStruct *) malloc(sizeof(DataStruct));
+  data->flag = FLAG;
+  data->fieldA=A_CE_AR;
+  data->fieldC = C(sequenceNumber);
+  data->fieldBCC1 = data->fieldA ^ data->fieldC;
 
-  data.fieldBCC2 = (unsigned char *)malloc(sizeof(unsigned char));
+  data->fieldBCC2 = (unsigned char *)malloc(sizeof(unsigned char));
   
   //Algortimo de calculo de BCC2 e 
   //I_0=D0//I i+1= I i ^data i
 
-  data.fieldBCC2[0] = buffer[0];
+  data->fieldBCC2[0] = buffer[0];
 
   for (int i = 1; i < length; i++)
   {
-    data.fieldBCC2[0] ^= buffer[i];
+    data->fieldBCC2[0] ^= buffer[i];
   }
 
   //Max size is 2 * length because byte stuffing doubles size
-  data.fieldD = (unsigned char *)malloc(sizeof(unsigned char)*length*2);
+  data->fieldD = (unsigned char *)malloc(sizeof(unsigned char)*length*2);
 
-  data.bcc2StufSize = BCC2Stufying(data.fieldBCC2);
-  data.dataStufSize = dataStuffing(buffer, length, data.fieldD);
+  data->bcc2StufSize = BCC2Stufying(data->fieldBCC2);
+  data->dataStufSize = dataStuffing(buffer, length, data->fieldD);
 
   return data;
 }
