@@ -116,7 +116,7 @@ int receiveControlBlock(int fd, uint *type , char *fileName) {
 int main(int argc, char* argv[]) {
     int portNumb = 0;
 
-    if(strcmp(argv[0], "./reader") == 0){
+    if(strcmp(argv[0],"/root/Desktop/src/reader") == 0){
 
         if(argc != 2){
             printf("Invalid call to reader\n");
