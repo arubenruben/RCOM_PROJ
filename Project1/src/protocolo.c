@@ -116,7 +116,7 @@ void alarm_handler_disc_signal(int signo)
     printf("Handler nao executado\n");
     return;
   }
-  
+
   if (n_tries > 0)
   {
     if(type_handling==HANDLING_CLOSE_EMISSOR){
@@ -156,7 +156,7 @@ void alarm_handler_data(int signo)
     printf("Handler nao executado\n");
     return;
   }
-  
+
   if (n_tries > 0)
   {
        printf("Fiz retransmissao\n");
@@ -206,7 +206,7 @@ int byteDeStuffing(unsigned char *buf,  int size_orig)
 
   if(size_orig<=1){
     printf("O SIZE MUDOU ABRUPTAMENTE\n");
-      
+
     return -1;
   }
   for (int i = DATA_START_INDEX; i < (size_orig - 1); i++)
@@ -238,9 +238,9 @@ int byteDeStuffing(unsigned char *buf,  int size_orig)
 
 int sendBlock(int flag, int fd)
 {
-  
+
   unsigned char buf[BUF_SIZE + 1];
-  
+
   //A Flag inicial e comum a qualquer trama
   if (flag == FLAG_LL_OPEN_RECEIVER || flag == FLAG_LL_OPEN_TRANSMITTER)
   {
@@ -308,7 +308,7 @@ int sendBlock(int flag, int fd)
     {
       buf[C_INDEX] = C_DISC;
     }
-    
+
     buf[BCC_INDEX] = buf[A_INDEX] ^ buf[C_INDEX];
 
     buf[FLAG_INDEX_END] = FLAG;
@@ -331,9 +331,9 @@ int sendBlock(int flag, int fd)
     n_bytes += write(fd, pointer_to_data->fieldD, pointer_to_data->dataStufSize);
     n_bytes += write(fd, pointer_to_data->fieldBCC2, pointer_to_data->bcc2StufSize);
     n_bytes += write(fd, (char *)&pointer_to_data->flag, sizeof(pointer_to_data->flag));
-  
+
     if(n_bytes != (pointer_to_data->bcc2StufSize + pointer_to_data->dataStufSize + 5)){
-    
+
       printf("Nao escrevi o bloco de data todo");
       return WRITE_FAIL;
 
@@ -374,7 +374,7 @@ int sendBlock(int flag, int fd)
       buf[C_INDEX] = C_REJ(1);
     else
       buf[C_INDEX] = C_REJ(0);
-    
+
     printf("ENVIEI REJ:%x\n",buf[C_INDEX]);
 
     buf[BCC_INDEX] = buf[A_INDEX] ^ buf[C_INDEX];
@@ -401,7 +401,7 @@ int readBlock(int flag, int fd)
 
   unsigned char leitura;
   unsigned int size = 0, state = ST_START;
-  
+
   if (flag == FLAG_LL_OPEN_RECEIVER || flag == FLAG_LL_OPEN_TRANSMITTER  || flag == FLAG_LL_CLOSE_TRANSMITTER_UA || flag == FLAG_LL_CLOSE_RECEIVER_DISC)
   {
 
@@ -601,13 +601,13 @@ int readBlock(int flag, int fd)
         break;
 
       case ST_A_RCV:
-        
+
         switch (leitura)
         {
         case C_DISC:
 
           state = ST_C_RCV;
-          
+
         break;
 
         case FLAG:
@@ -669,7 +669,7 @@ int readBlock(int flag, int fd)
 
   }
   else if(flag == FLAG_LL_CLOSE_RECEIVER_UA){
-  
+
     for (size = 0; state != ST_STOP && size < MAX_BUF; size++)
     {
       //A mensagem vai ser lida byte a byte para garantir que nao há falha de informacao
@@ -677,7 +677,7 @@ int readBlock(int flag, int fd)
       if ((read(fd, &leitura, 1) != 0))
       {
       }
-      
+
       switch (state)
       {
       case ST_START:
@@ -712,13 +712,13 @@ int readBlock(int flag, int fd)
         break;
 
       case ST_A_RCV:
-        
+
         switch (leitura)
         {
         case C_UA:
 
           state = ST_C_RCV;
-          
+
         break;
 
         case FLAG:
@@ -821,13 +821,13 @@ int readBlock(int flag, int fd)
         break;
 
       case ST_A_RCV:
-        
+
         switch (leitura)
         {
         case C_REJ(0):
 
           state = ST_C_RCV_REJ;
-          
+
         break;
 
         case C_RR(0):
@@ -898,7 +898,7 @@ int readBlock(int flag, int fd)
 
       case ST_BCC_OK_REJ:
 
-      
+
         //check FLAG byte
         if (leitura == FLAG)
         {
@@ -909,7 +909,7 @@ int readBlock(int flag, int fd)
           //received other, go to start
           state = ST_START;
         break;
-  
+
       case ST_BCC_OK_RR:
         //check FLAG byte
         if (leitura == FLAG)
@@ -929,8 +929,8 @@ int readBlock(int flag, int fd)
     }
     return READ_FAIL;
   }
-  
-  
+
+
   else if(flag==FLAG_DATA_SEEKING_ANSWER_WITH1){
 
     for (size = 0; state != ST_STOP && size < MAX_BUF; size++)
@@ -975,13 +975,13 @@ int readBlock(int flag, int fd)
         break;
 
       case ST_A_RCV:
-        
+
         switch (leitura)
         {
         case C_REJ(1):
 
           state = ST_C_RCV_REJ;
-          
+
         break;
 
         case C_RR(1):
@@ -1030,7 +1030,7 @@ int readBlock(int flag, int fd)
 
         if (leitura == (A_CE_AR ^ C_RR(1)))
         {
-        
+
           state = ST_BCC_OK_RR;
 
           break;
@@ -1061,8 +1061,8 @@ int readBlock(int flag, int fd)
         else
           //received other, go to start
           state = ST_START;
-        
-        
+
+
         break;
 
       }
@@ -1189,20 +1189,20 @@ int llwrite(int fd, unsigned char *buffer, int length)
   int num_bytes = 0;
   int ret_resposta=READ_FAIL;
 
-  
+
   DataStruct data = createMessage(sequenceNumber, buffer, length);
   data.size_of_data_frame=sizeof(data);
   pointer_to_data=&data;
 
   while(ret_resposta==READ_FAIL||ret_resposta==READ_REJ_SUCESS){
-    
+
     if (signal(SIGALRM, alarm_handler_data) == SIG_ERR)
     {
       perror("Error in ignoring SIG ALARM handler");
     }
 
     num_bytes=sendBlock(FLAG_LL_DATA_SEND,fd);
-    
+
     if(num_bytes==WRITE_FAIL){
       printf("Erro a enviar o bloco\n");
       return -1;
@@ -1210,7 +1210,7 @@ int llwrite(int fd, unsigned char *buffer, int length)
 
     n_tries=MAX_RETR;
     alarm(TIMEOUT);
-    
+
     if(sequenceNumber==0){
 
       ret_resposta=readBlock(FLAG_DATA_SEEKING_ANSWER_WITH1,fd);
@@ -1238,7 +1238,7 @@ int llwrite(int fd, unsigned char *buffer, int length)
   sequenceNumber = (sequenceNumber + 1) % 2;
 
   return num_bytes;
-  
+
 }
 
 /*
@@ -1255,7 +1255,7 @@ Esta certo:
 
 Fazer o distuffing
 
-Testar Bcc2. 
+Testar Bcc2.
 
 Testar se a trama e repetida ou nao
 
@@ -1278,7 +1278,6 @@ int llread(int fd, unsigned char *buffer)
   int size_buf=0, max_size=2*MAX_BUF;
   unsigned int state = ST_START;
   bool end = false;
-  bool short_circuit=false;
 
   unsigned char *buf = NULL;
   int size_buffer = 0;
@@ -1316,7 +1315,7 @@ int llread(int fd, unsigned char *buffer)
           perror("Failled to allocate memory");
           exit(NO_MEM);
         }
-      }    
+      }
       //Read byte para o buf
 
       if (read(fd, &buf[size_buf], 1) < 0)
@@ -1326,10 +1325,6 @@ int llread(int fd, unsigned char *buffer)
         return READ_FAIL;
       }
 
-      if(short_circuit==true){
-        printf("size_buf:%d, %x\n",size_buf,buf[size_buf]);
-      }
-      
       //Go through state machine
       switch (state)
       {
@@ -1413,7 +1408,7 @@ int llread(int fd, unsigned char *buffer)
 
     //Byte destuffing, returns size of buffer
     size_buffer = byteDeStuffing(buf, size_buf);
-    
+
     if(size_buffer<1){
       end=false;
 
@@ -1429,7 +1424,7 @@ int llread(int fd, unsigned char *buffer)
       }
 
     }
-    
+
     r = (r + 1) % 2;
 
     //Send acknowlegment
@@ -1442,9 +1437,6 @@ int llread(int fd, unsigned char *buffer)
 
     //Deu erro BCC2 vou enviar um REJ
     else{
-      
-      printf("Enviar REJ\n");
-      short_circuit=true; 
       if(r)
         sendBlock(FLAG_DATA_SENDING_ANSWER_REJ_WITH1, fd);
       else
@@ -1455,8 +1447,8 @@ int llread(int fd, unsigned char *buffer)
     size_buf = 0;
     state = ST_START;
 
-   
-    
+
+
   }
 
 
@@ -1477,8 +1469,8 @@ DataStruct createMessage(unsigned int sequenceNumber, unsigned char *buffer, int
   data.fieldBCC1 = data.fieldA ^ data.fieldC;
 
   data.fieldBCC2 = (unsigned char *)malloc(sizeof(unsigned char));
-  
-  //Algortimo de calculo de BCC2 e 
+
+  //Algortimo de calculo de BCC2 e
   //I_0=D0//I i+1= I i ^data i
 
   data.fieldBCC2[0] = buffer[0];
@@ -1546,7 +1538,7 @@ unsigned int dataStuffing(unsigned char *data, int length, unsigned char *fieldD
 
     }
     else{
-      
+
       fieldD[i+pos]=data[i];
     }
   }
@@ -1561,10 +1553,10 @@ int llclose(int fd, int flag)
   int read_bloc_ret = READ_FAIL;
   n_tries = MAX_RETR;
 
-  
+
   //Transmitter side
   if (flag == FLAG_LL_CLOSE_TRANSMITTER_DISC)
-  {    
+  {
     if (signal(SIGALRM, alarm_handler_disc_signal) < 0)
     {
       perror("Erro a instalar o handler no LL_CLOSE, no receiver");
@@ -1575,23 +1567,23 @@ int llclose(int fd, int flag)
       printf("Erro a enviar FLAG_LL_CLOSE_TRANSMITTER_DISC\n");
       return -1;
     }
-    
+
     type_handling=HANDLING_CLOSE_EMISSOR;
-    
+
     alarm(TIMEOUT);
-     
+
     while (read_bloc_ret == READ_FAIL)
     {
       read_bloc_ret = readBlock(FLAG_LL_CLOSE_TRANSMITTER, fd);
     }
-    
+
     if (read_bloc_ret == READ_FAIL)
     {
       printf("O llclose no transmitter dei timeout sem resposta valida\n");
       return -1;
     }
 
-    
+
     if (signal(SIGALRM, SIG_IGN) == SIG_ERR)
     {
       perror("Error in ignoring SIG ALARM handler");
@@ -1639,7 +1631,7 @@ int llclose(int fd, int flag)
     }
   }
   else if(flag==FLAG_HANDLER_CALL){
-    
+
   }
   else
   {

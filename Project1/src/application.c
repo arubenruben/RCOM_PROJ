@@ -60,13 +60,13 @@ int sendControlBlock(int fd, int fieldC, uint fileSize, char *fileName) {
 
     // Create AppControlStruct
     control.fieldC = fieldC;
-    
+
     //FileSize
     control.fileSize.type = FileSize;
     control.fileSize.length = strlen(fileSizeString);
     for (uint i = 0; i < strlen(fileSizeString); i++)
 		control.fileSize.value[i] = fileSizeString[i];
-    
+
     //FileName
     control.fileName.type = FileName;
     control.fileName.length = strlen(fileName);
@@ -108,7 +108,7 @@ int receiveControlBlock(int fd, uint *type , char *fileName) {
 
     // FileName
     memcpy(fileName, control.fileName.value, control.fileName.length);
-    
+
     // Returns FileSize
     return atoi((char*)control.fileSize.value);
 }
@@ -116,7 +116,7 @@ int receiveControlBlock(int fd, uint *type , char *fileName) {
 int main(int argc, char* argv[]) {
     int portNumb = 0;
 
-    if(strcmp(argv[0],"/root/Desktop/src/reader") == 0){
+    if(strcmp(argv[0],"./reader") == 0){
 
         if(argc != 2){
             printf("Invalid call to reader\n");
