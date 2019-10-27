@@ -1,24 +1,29 @@
 #include "protocolo.h"
 
+//LOCAL MACROS
 #define MAX_RETR 3
 #define TIMEOUT 3
 
-void alarm_handler_set_signal(int signo);
-static int fd_for_handler;
+//GLOBAL VARS
+DataStruct *pointer_to_data=NULL;
+static int n_tries = MAX_RETR;
+static struct termios oldtio;
 static int type_handling=HANDLING_UNDEFINED;
 
+
+
+//LOCAL FUNCTIONS
+void alarm_handler_set_signal(int signo);
+static int fd_for_handler;
 int sendBlock( int flag,  int fd);
 int readBlock( int flag,  int fd);
-
-static struct termios oldtio;
-static int n_tries = MAX_RETR;
-
-DataStruct *pointer_to_data=NULL;
-
 DataStruct createMessage(unsigned int sequenceNumber, unsigned char *buffer, int length);
 unsigned int BCC2Stufying(unsigned char *BCC2);
 unsigned int dataStuffing(unsigned char *data, int length, unsigned char *fieldD);
+//
 
+
+//FUNCTION RESPONSIBLE TO CONVERT SERIAL PORT NUMBER TO A FD IN THE FD TABLE LIST
 int openNonCanonical(int port_number)
 {
   struct termios newtio;
@@ -79,6 +84,7 @@ int openNonCanonical(int port_number)
   return fd_port;
 }
 
+//HANDLER FOR THE LLOPEN SET PROTECTION
 void alarm_handler_set_signal(int signo)
 {
 
@@ -108,6 +114,7 @@ void alarm_handler_set_signal(int signo)
   return;
 }
 
+//HANDLER FOR THE LLCLOSE DISC PROTECTION
 void alarm_handler_disc_signal(int signo)
 {
 
@@ -148,6 +155,7 @@ void alarm_handler_disc_signal(int signo)
   return;
 }
 
+//HANDLER FOR THE LLWRITE PROTECTION
 void alarm_handler_data(int signo)
 {
   printf("Alarme\n");
@@ -174,6 +182,7 @@ void alarm_handler_data(int signo)
   return;
 }
 
+//FUNCTION TO TESTE THE BBC2 VALUE OF THE DATA SEGMENT OF A FRAME. IF FAIL REJ SHOULD BE SENT
 int checkBCC2(unsigned char *buffer, int size)
 {
   unsigned char bcc = buffer[size - 1];
@@ -194,6 +203,7 @@ int checkBCC2(unsigned char *buffer, int size)
   return bcc == bcc_check;
 }
 
+//DESTUFFING ROUTINE. CALLED BY THE READER SIDE TO START THE BYTE INTEGRATY ANALISYS
 int byteDeStuffing(unsigned char *buf,  int size_orig)
 {
   unsigned int size_dest = 0;
@@ -236,6 +246,7 @@ int byteDeStuffing(unsigned char *buf,  int size_orig)
   return size_dest;
 }
 
+//SINCE HANDLERS CANT IN CASE O RETRANSMISSION CALL LLWRITE OR LLOPEN OR LLCLOSE AS WHOLE SINCE THIS ROUTINES MAKE OTHER FUNCTIONALITIES FURTHER THAN JUST SENT INFORMATION. API MUST BE SUPPORTED BY A ENCAPSALUTED SEGMENT WHOSE REPONSABILITY IS JUST THE INFORMATION SEND. THAT SEGMENT IS SENDBLOCK
 int sendBlock(int flag, int fd)
 {
 
