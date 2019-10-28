@@ -5,7 +5,7 @@
 #define MODEMDEVICE_0 "/dev/ttyS0"
 #define MODEMDEVICE_1 "/dev/ttyS1"
 #define MODEMDEVICE_2 "/dev/ttyS2"
-#define _POSIX_SOURCE 1 
+#define _POSIX_SOURCE 1
 #define FALSE 0
 #define TRUE 1
 #define UNKNOWN_PORT -1
@@ -39,7 +39,7 @@
 #define C_INDEX 2
 #define BCC_INDEX 3
 #define FLAG_INDEX_END 4
-#define START_INDEX 0
+#define START_INDEX -1
 
 //Flags values
 #define ESC 0x7d

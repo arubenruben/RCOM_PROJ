@@ -1286,6 +1286,7 @@ Se nova -> Passo a app e envio a app
 int llread(int fd, unsigned char *buffer)
 {
   static unsigned int r = 0;
+
   int size_buf=0, max_size=2*MAX_BUF;
   unsigned int state = ST_START;
   bool end = false;
@@ -1336,17 +1337,17 @@ int llread(int fd, unsigned char *buffer)
         return READ_FAIL;
       }
 
+
       //Go through state machine
       switch (state)
       {
-
         case ST_START:
         {
 
           if (buf[size_buf] == FLAG)
             state = ST_FLAG_RCV;
           else
-            size_buf = 0;
+            size_buf = -1;
         }
 
         break;
@@ -1364,7 +1365,7 @@ int llread(int fd, unsigned char *buffer)
           }
 
           else
-            size_buf = 1;
+            size_buf = 0;
         }
 
         break;
@@ -1378,13 +1379,27 @@ int llread(int fd, unsigned char *buffer)
           else if (buf[size_buf] == FLAG)
           {
             state = ST_FLAG_RCV;
-            size_buf = 1;
+            size_buf = 0;
+          }
+          else if(buf[size_buf] == C((r+1)%2) )
+          {
+
+            if(r)
+              sendBlock(FLAG_DATA_SENDING_ANSWER_RR_WITH1, fd);
+            else
+              sendBlock(FLAG_DATA_SENDING_ANSWER_RR_WITH0, fd);
+
+            state=ST_START;
+            size_buf=START_INDEX;
+
+
+            break;
           }
 
           else
           {
             state = ST_START;
-            size_buf = 0;
+            size_buf = START_INDEX;
           }
         }
         break;
@@ -1398,12 +1413,12 @@ int llread(int fd, unsigned char *buffer)
           else if (buf[size_buf] == FLAG)
           {
             state = ST_FLAG_RCV;
-            size_buf = 1;
+            size_buf = 0;
           }
           else
           {
             state = ST_START;
-            size_buf = 0;
+            size_buf = START_INDEX;
           }
         }
         break;
