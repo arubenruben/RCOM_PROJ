@@ -88,8 +88,6 @@ int openNonCanonical(int port_number)
 void alarm_handler_set_signal(int signo)
 {
 
-  printf("Alarme chamado\n");
-
   if (signo != SIGALRM)
   {
     printf("Handler nao executado\n");
@@ -106,7 +104,6 @@ void alarm_handler_set_signal(int signo)
   }
   else
   {
-    //printf("Handler chama llclose.TIMEOUT TOTAL\n");
     llclose(fd_for_handler, FLAG_HANDLER_CALL);
     exit(-1);
   }
@@ -158,7 +155,6 @@ void alarm_handler_disc_signal(int signo)
 //HANDLER FOR THE LLWRITE PROTECTION
 void alarm_handler_data(int signo)
 {
-  printf("Alarme\n");
   if (signo != SIGALRM)
   {
     printf("Handler nao executado\n");
@@ -386,8 +382,6 @@ int sendBlock(int flag, int fd)
     else
       buf[C_INDEX] = C_REJ(0);
 
-    printf("ENVIEI REJ:%x\n",buf[C_INDEX]);
-
     buf[BCC_INDEX] = buf[A_INDEX] ^ buf[C_INDEX];
 
     buf[FLAG_INDEX_END] = FLAG;
@@ -400,7 +394,6 @@ int sendBlock(int flag, int fd)
   }
   else
   {
-    printf("SEND BLOCK not implemented\n");
     return WRITE_FAIL;
   }
 
@@ -1103,7 +1096,6 @@ int readBlock(int flag, int fd)
 
   else
   {
-    printf("Read block not implemented\n");
     return READ_FAIL;
   }
 }
@@ -1445,7 +1437,6 @@ int llread(int fd, unsigned char *buffer)
       {
         end = true;
       }else{
-        printf("Erro no bcc2\n");
         end=false;
       }
 
