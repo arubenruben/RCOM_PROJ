@@ -1,8 +1,10 @@
 #include "protocolo.h"
+#include "time.h"
 
 //LOCAL MACROS
 #define MAX_RETR 3
 #define TIMEOUT 3
+#define DELAY (640*1000)
 
 //GLOBAL VARS
 DataStruct *pointer_to_data=NULL;
@@ -1212,7 +1214,9 @@ int llwrite(int fd, unsigned char *buffer, int length)
       perror("Error in ignoring SIG ALARM handler");
     }
 
+    // usleep(DELAY);
     num_bytes=sendBlock(FLAG_LL_DATA_SEND,fd);
+
 
     if(num_bytes==WRITE_FAIL){
       printf("Erro a enviar o bloco\n");
@@ -1329,14 +1333,12 @@ int llread(int fd, unsigned char *buffer)
         }
       }
       //Read byte para o buf
-
       if (read(fd, &buf[size_buf], 1) < 0)
       {
         free(buf);
         perror("Failled to read");
         return READ_FAIL;
       }
-
 
       //Go through state machine
       switch (state)
@@ -1406,7 +1408,6 @@ int llread(int fd, unsigned char *buffer)
 
         case ST_C_RCV:
         {
-
           if (buf[size_buf] == (A_CE_AR ^ C(r)))
             state = ST_D;
 
