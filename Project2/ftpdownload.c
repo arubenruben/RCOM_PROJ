@@ -28,7 +28,7 @@ typedef int STATE;
 #define MAX_BUFFER_SIZE 512
 
 
-int parseInput(const char * input,char * user,char * password,char * host,char * url_path);
+int parseInput(const char * input,char * user,char * password,char * host,char * path,char * filename);
 
 void buffers_cleaner(char * user,char * password,char * host,char * url_path){
 
@@ -38,6 +38,8 @@ void buffers_cleaner(char * user,char * password,char * host,char * url_path){
     memset(url_path,0,MAX_BUFFER_SIZE);
 
 }
+
+//struct hostent DNS_CONVERT(char )
 
 
 
@@ -53,14 +55,14 @@ int main(int argc, char * argv[]){
     }
 
 
-    char user[MAX_BUFFER_SIZE],password[MAX_BUFFER_SIZE],host[MAX_BUFFER_SIZE],url_path[MAX_BUFFER_SIZE];
+    char user[MAX_BUFFER_SIZE],password[MAX_BUFFER_SIZE],host[MAX_BUFFER_SIZE],path[MAX_BUFFER_SIZE],filename[MAX_BUFFER_SIZE];
 
-    if(parseInput(argv[1],user,password,host,url_path)!=0){
+    if(parseInput(argv[1],user,password,host,path,filename)!=0){
         fprintf(stderr,"Error in file parsing\n");
         exit(-1);
     }
 
-    fprintf(stdout,"%s\n%s\n%s\n%s\n",user,password,host,url_path);
+    fprintf(stdout,"%s\n%s\n%s\n%s\n%s\n",user,password,host,path,filename);
 
     
     fprintf(stdout,"Not implemented yet\n");
@@ -68,15 +70,18 @@ int main(int argc, char * argv[]){
 }
 
 
-int parseInput(const char * input,char * user,char * password,char * host,char * url_path){
+int parseInput(const char * input,char * user,char * password,char * host,char * path,char * filename){
 
-    if(input==NULL||user==NULL||password==NULL||host==NULL||url_path==NULL){
+    if(input==NULL||user==NULL||password==NULL||host==NULL||path==NULL||filename==NULL){
         fprintf(stderr,"Invalid References in parse input\n");
         return -1;
     }
 
     //Const to avoid erros
     const int size_of_input=strlen(input);
+
+    char path_and_filename[2*MAX_BUFFER_SIZE];
+    char *pointer_aux=NULL;
     
     STATE current_state=ST_READ_FTP;
 
@@ -201,7 +206,7 @@ int parseInput(const char * input,char * user,char * password,char * host,char *
                 current_state=ST_FAIL;
 
             //Insere caracter a caracter na string de output
-            url_path[iterator_insert]=input[i];
+            path_and_filename[iterator_insert]=input[i];
             iterator_insert++;
 
 
@@ -221,6 +226,32 @@ int parseInput(const char * input,char * user,char * password,char * host,char *
         }
 
     }
+
+    //Diferenciate path from password
+
+    pointer_aux=strrchr(path_and_filename,'/');
+    
+    //There is no path specified
+    if(pointer_aux==NULL){
+        path=NULL;
+        strcpy(password,pointer_aux);
+    }
+    else{
+        //++ to skip the /
+        pointer_aux++;
+        strcpy(filename,pointer_aux);
+        pointer_aux--;
+        //Place a \0 in the 
+        *pointer_aux='\0';
+        strcpy(path,path_and_filename);
+        fprintf(stdout,"Nao sei se leva o ultimo / ou nao. Pus que nao precisava\n");
+        
+    }
+
+
+
+
+
 
     return 0;
 }
