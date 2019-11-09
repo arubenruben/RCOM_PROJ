@@ -75,6 +75,8 @@ int main(int argc, char * argv[]){
     char user[MAX_BUFFER_SIZE],password[MAX_BUFFER_SIZE],host[MAX_BUFFER_SIZE],path[MAX_BUFFER_SIZE],filename[MAX_BUFFER_SIZE];
     int socket_control=-1,socket_data=-1;
     struct hostent* ip_info_from_dns=NULL;
+    struct sockaddr_in control_server_addr;
+    struct sockaddr_in data_server_addr;
 
     if(parseInput(argv[1],user,password,host,path,filename)!=0){
         fprintf(stderr,"Error in file parsing\n");
@@ -94,15 +96,35 @@ int main(int argc, char * argv[]){
     //Transform DNS to IP ADDRESS
     ip_info_from_dns=DNS_CONVERT_TO_IP(host);
 
+    //Fill sockets connection parameters
 
+    //Erase any possible info inside this structs
+    bzero((char*)&control_server_addr,sizeof(control_server_addr));
+    bzero((char*)&data_server_addr,sizeof(data_server_addr));
+    //Type of connection
+    control_server_addr.sin_family = AF_INET;
+    data_server_addr.sin_family = AF_INET;
 
+	/*32 bit Internet address network byte ordered*/
+    control_server_addr.sin_addr.s_addr = inet_addr(inet_ntoa(*((struct in_addr *)ip_info_from_dns->h_addr)));
+    data_server_addr.sin_addr.s_addr = inet_addr(inet_ntoa(*((struct in_addr *)ip_info_from_dns->h_addr)));
+    
+    /*server TCP port must be network byte ordered */
+	control_server_addr.sin_port = htons(PORT_COMMANDS);		
+    data_server_addr.sin_port = htons(PORT_DATA);
+
+    //Establish connection of socket control
+    if(connect(socket_control, (struct sockaddr *)&control_server_addr, sizeof(control_server_addr)) < 0){
+        perror("connect control socket()");
+		exit(0);
+	}
+    //Establish connection of data control
+    if(connect(socket_data, (struct sockaddr *)&data_server_addr, sizeof(data_server_addr)) < 0){
+        perror("connect data socket()");
+		exit(0);
+	}	
     
 
-
-
-
-
-    
 
     
     fprintf(stdout,"Not implemented yet\n");
