@@ -9,6 +9,9 @@
 #include <signal.h>
 #include <netdb.h>
 
+#define MAX_BUFFER_SIZE 512
+#define PORT_COMMANDS 21
+#define PORT_DATA 20
 //State Machine to parse input
 enum STATES{
 
@@ -25,7 +28,6 @@ typedef int STATE;
 
 
 //Sets the maximum value the output of buffer can contain
-#define MAX_BUFFER_SIZE 512
 
 
 int parseInput(const char * input,char * user,char * password,char * host,char * path,char * filename);
@@ -39,7 +41,22 @@ void buffers_cleaner(char * user,char * password,char * host,char * url_path){
 
 }
 
-//struct hostent DNS_CONVERT(char )
+struct hostent* DNS_CONVERT_TO_IP(char* DNS){
+    
+    struct hostent* ret_value;
+
+    if(DNS==NULL){
+        fprintf(stderr,"DNS INVALID REF\n");
+        exit(-1);
+    }
+
+    if((ret_value=gethostbyname(DNS))==NULL){
+        herror("gethostbyname:");
+        exit(-1);
+    }
+        
+    return ret_value;
+}
 
 
 
@@ -56,13 +73,36 @@ int main(int argc, char * argv[]){
 
 
     char user[MAX_BUFFER_SIZE],password[MAX_BUFFER_SIZE],host[MAX_BUFFER_SIZE],path[MAX_BUFFER_SIZE],filename[MAX_BUFFER_SIZE];
+    int socket_control=-1,socket_data=-1;
+    struct hostent* ip_info_from_dns=NULL;
 
     if(parseInput(argv[1],user,password,host,path,filename)!=0){
         fprintf(stderr,"Error in file parsing\n");
         exit(-1);
     }
 
-    fprintf(stdout,"%s\n%s\n%s\n%s\n%s\n",user,password,host,path,filename);
+    //Open both sockets
+    if((socket_control=socket(AF_INET,SOCK_STREAM,0))<0){
+        perror("Error opening the control socket:");
+        return -1;
+    }
+
+    if((socket_data=socket(AF_INET,SOCK_STREAM,0))<0){
+        perror("Erro in opening the data socket:");
+        return -1;
+    }
+    //Transform DNS to IP ADDRESS
+    ip_info_from_dns=DNS_CONVERT_TO_IP(host);
+
+
+
+    
+
+
+
+
+
+    
 
     
     fprintf(stdout,"Not implemented yet\n");
@@ -79,7 +119,7 @@ int parseInput(const char * input,char * user,char * password,char * host,char *
 
     //Const to avoid erros
     const int size_of_input=strlen(input);
-
+    //In the worst case we could store a password and also a path here
     char path_and_filename[2*MAX_BUFFER_SIZE];
     char *pointer_aux=NULL;
     
@@ -245,7 +285,7 @@ int parseInput(const char * input,char * user,char * password,char * host,char *
         *pointer_aux='\0';
         strcpy(path,path_and_filename);
         fprintf(stdout,"Nao sei se leva o ultimo / ou nao. Pus que nao precisava\n");
-        
+
     }
 
 
