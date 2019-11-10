@@ -1,15 +1,13 @@
-
-
 #include "ftp.h"
 #include <stdlib.h>
 
 
-
+//LOCAL FUNCTIONS
 int ftp_user(const int socket_control,const char * username);
 int ftp_password(const int socket_control,const char *password);
 
 
-
+//GLOBAL FUNCTIONS
 int ftp_user(const int socket_control,const char * username){
 
     if(username==NULL){
@@ -41,7 +39,38 @@ int ftp_user(const int socket_control,const char * username){
 
     return 0;
 }
+int ftp_password(const int socket_control,const char *password){
+    
+    if(password==NULL){
+        fprintf(stderr,"Ref invalida em ftp_user\n");
+        return -1;
+    }
+    
+    //this is the command FTP to prepare ther server to receive an authentication
+    char cmd[2*MAX_BUFFER_SIZE];
+    int code=-1;
+    char reply[MAX_BUFFER_SIZE];
+    //Ensures 0 values is set
+    memset(reply,0,sizeof(reply));
+    
+    //Constructs the formated string
+    sprintf(cmd,"PASS %s\r\n",password);
 
+    int n_bytes_lidos;
+    
+    //SEND THE USER COMMAND + password
+    if(ftp_write(socket_control,cmd)<0){
+        perror("Error sending password:");
+        exit(-1);
+    }
+    //READ THE REPLY TO USER COMMAND
+    if((n_bytes_lidos=ftp_read(socket_control,&code,reply,sizeof(reply)))<0){
+        fprintf(stderr,"Nada lido no user reply\n");
+        return -1;
+    }
+
+    return 0;
+}
 int ftp_write(const int socket_fd,const char *msg){
 
     size_t n_bytes=-1;
@@ -62,8 +91,6 @@ int ftp_write(const int socket_fd,const char *msg){
 
     return n_bytes;    
 }
-
-
 int ftp_read(const int socket_fd,int* code_returned,char * string_returned,const int size_of_string_returned_array){
 
     if(string_returned==NULL||code_returned==NULL){
@@ -99,16 +126,9 @@ int ftp_read(const int socket_fd,int* code_returned,char * string_returned,const
 
     fprintf(stdout,"Read %ld bytes\n",n_bytes_read);
     fprintf(stdout,"Code %d \n",*code_returned);
-    fprintf(stdout,"Msg %s",string_returned);
+    fprintf(stdout,"Msg %s\n",string_returned);
     
-    fprintf(stdout,"MULTIPLES LINES NEEDS TO BE FIXED\n");
-
-    FILE *F=fdopen(socket_fd,"r");
-    fflush(F);
-
-
     
-
     //Parse the code returned
     
     //According with:https://en.wikipedia.org/wiki/List_of_FTP_server_return_codes
@@ -146,35 +166,3 @@ int ftp_login(const int socket_control,const char * username,const char *passwor
     return 0;
 }
 
-int ftp_password(const int socket_control,const char *password){
-    
-    if(password==NULL){
-        fprintf(stderr,"Ref invalida em ftp_user\n");
-        return -1;
-    }
-    
-    //this is the command FTP to prepare ther server to receive an authentication
-    char cmd[2*MAX_BUFFER_SIZE];
-    int code=-1;
-    char reply[MAX_BUFFER_SIZE];
-    //Ensures 0 values is set
-    memset(reply,0,sizeof(reply));
-    
-    //Constructs the formated string
-    sprintf(cmd,"PASS %s\r\n",password);
-
-    int n_bytes_lidos;
-    
-    //SEND THE USER COMMAND + password
-    if(ftp_write(socket_control,cmd)<0){
-        perror("Error sending password:");
-        exit(-1);
-    }
-    //READ THE REPLY TO USER COMMAND
-    if((n_bytes_lidos=ftp_read(socket_control,&code,reply,sizeof(reply)))<0){
-        fprintf(stderr,"Nada lido no user reply\n");
-        return -1;
-    }
-
-    return 0;
-}
