@@ -24,13 +24,14 @@ typedef int STATE;
 int parseInput(const char * input,char * user,char * password,char * host,char * path,char * filename);
 struct hostent* DNS_CONVERT_TO_IP(char* DNS);
 
-void buffers_cleaner(char * user,char * password,char * host,char * url_path,char * filename){
+void buffers_cleaner(char * user,char * password,char * host,char * url_path,char * filename,char* ip_data){
 
     memset(user,0,MAX_BUFFER_SIZE);
     memset(password,0,MAX_BUFFER_SIZE);
     memset(host,0,MAX_BUFFER_SIZE);
     memset(url_path,0,MAX_BUFFER_SIZE);
     memset(filename,0,MAX_BUFFER_SIZE);
+    memset(ip_data,0,MAX_BUFFER_SIZE);
 
 }
 
@@ -66,12 +67,14 @@ int main(int argc, char * argv[]){
 
     char user[MAX_BUFFER_SIZE],password[MAX_BUFFER_SIZE],host[MAX_BUFFER_SIZE],path[MAX_BUFFER_SIZE],filename[MAX_BUFFER_SIZE];
     char reply_str[MAX_BUFFER_SIZE];
+    char ip_data[MAX_BUFFER_SIZE];
     int code_returned=-1;
     int socket_control=-1,socket_data=-1;
+    int port_data;
     struct hostent* ip_info_from_dns=NULL;
     struct sockaddr_in control_server_addr;
     struct sockaddr_in data_server_addr;
-    buffers_cleaner(user,password,host,user,filename);
+    buffers_cleaner(user,password,host,user,filename,ip_data);
 
     if(parseInput(argv[1],user,password,host,path,filename)!=0){
         fprintf(stderr,"Error in file parsing\n");
@@ -84,10 +87,6 @@ int main(int argc, char * argv[]){
         return -1;
     }
 
-    if((socket_data=socket(AF_INET,SOCK_STREAM,0))<0){
-        perror("Erro in opening the data socket:");
-        return -1;
-    }
     //Transform DNS to IP ADDRESS
     ip_info_from_dns=DNS_CONVERT_TO_IP(host);
 
@@ -95,23 +94,23 @@ int main(int argc, char * argv[]){
 
     //Erase any possible info inside this structs
     bzero((char*)&control_server_addr,sizeof(control_server_addr));
-    bzero((char*)&data_server_addr,sizeof(data_server_addr));
     //Type of connection
     control_server_addr.sin_family = AF_INET;
-    data_server_addr.sin_family = AF_INET;
 
 	/*32 bit Internet address network byte ordered*/
     control_server_addr.sin_addr.s_addr = inet_addr(inet_ntoa(*((struct in_addr *)ip_info_from_dns->h_addr)));
-    data_server_addr.sin_addr.s_addr = inet_addr(inet_ntoa(*((struct in_addr *)ip_info_from_dns->h_addr)));
     
     /*server TCP port must be network byte ordered */
 	control_server_addr.sin_port = htons(PORT_COMMANDS);		
-    data_server_addr.sin_port = htons(PORT_DATA);
 
+    
+    
+    
+    
     //Establish connection of socket control
     if(connect(socket_control, (struct sockaddr *)&control_server_addr, sizeof(control_server_addr)) < 0){
         perror("connect control socket()");
-		exit(0);
+		exit(-1);
 	}
 
 
@@ -125,6 +124,27 @@ int main(int argc, char * argv[]){
         fprintf(stderr,"Erro em ftp_user\n");
         return -1;
     }
+
+    if(ftp_passive_mode(socket_control,ip_data,&port_data)<0){
+        fprintf(stderr,"FTP_PASSIVE_MODE\n");
+        return -1;
+    }
+
+    //Creation + Config + Connect Socket Dados
+    if((socket_data=socket(AF_INET,SOCK_STREAM,0))<0){
+        perror("Erro in opening the data socket:");
+        return -1;
+    }
+    bzero((char*)&data_server_addr,sizeof(data_server_addr));
+    data_server_addr.sin_family = AF_INET;
+    data_server_addr.sin_addr.s_addr = inet_addr(ip_data);
+    data_server_addr.sin_port = htons(port_data);
+    
+    //Establish connection of socket data
+    if(connect(socket_data, (struct sockaddr *)&data_server_addr, sizeof(data_server_addr)) < 0){
+        perror("connect data socket()");
+		exit(-1);
+	}
    
     fprintf(stdout,"Not implemented yet\n");
     return 0;

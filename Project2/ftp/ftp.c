@@ -1,4 +1,5 @@
 #include "ftp.h"
+#include <stdio.h>
 #include <stdlib.h>
 
 
@@ -22,7 +23,7 @@ int ftp_user(const int socket_control,const char * username){
     //Ensures 0 values is set
     memset(reply,0,sizeof(reply));
 
-    sprintf(cmd,"USER %s\r\n",username);
+    sprintf(cmd,"USER %s\n",username);
 
     int n_bytes_lidos;
     
@@ -121,7 +122,7 @@ int ftp_read(const int socket_fd,int* code_returned,char * string_returned,const
     *code_returned=atoi(code_str);
     
     //Cpy the reply text (read_str+3 DISCARD the 3 digit code)
-    strncpy(string_returned,read_str+3,size_of_string_returned_array);
+    strncpy(string_returned,read_str,size_of_string_returned_array);
 
 
     fprintf(stdout,"Read %ld bytes\n",n_bytes_read);
@@ -144,6 +145,9 @@ int ftp_read(const int socket_fd,int* code_returned,char * string_returned,const
         exit(-1);
     }
 
+    FILE *F =fdopen(socket_fd,"r");
+    fflush(F);
+
 }
 
 int ftp_login(const int socket_control,const char * username,const char *password){
@@ -162,6 +166,50 @@ int ftp_login(const int socket_control,const char * username,const char *passwor
         fprintf(stderr,"Erro no FTP_PASSWORD\n");
         return -1;
     }
+
+    return 0;
+}
+
+int ftp_passive_mode(const int socket_control,char *ip,int* port){
+
+    if (ip==NULL||port==NULL){
+        fprintf(stderr,"Invalid Refs in passive_mode\n");
+        return -1;
+    }
+
+    char *cmd="PASV\n";
+    int code_returned=-1;
+    char str_msg[2*MAX_BUFFER_SIZE];
+
+    if(ftp_write(socket_control,cmd)<0){
+        fprintf(stderr,"FTP_WRITE_PASV_ERROR\n");
+        return -1;
+    }
+
+    if(ftp_read(socket_control,&code_returned,str_msg,sizeof(str_msg))<0){
+        fprintf(stderr,"Error receiving the PASV reply\n");
+        return -1;
+    }
+    int ipPart1,ipPart2,ipPart3,ipPart4;
+    int portPart1,portPart2;
+
+    fprintf(stdout,"A mensagem antes de dar parsing:%s\n",str_msg);
+    
+    if((sscanf(str_msg,"227 Entering Passive Mode (%d,%d,%d,%d,%d,%d).",&ipPart1,&ipPart2,&ipPart3,&ipPart4,&portPart1,&portPart2)<0)){
+        fprintf(stderr,"Number of parameters red dont match in ftp_passive_mode\n");
+        return -1;
+    }
+
+    if ((sprintf(ip,"%d.%d.%d.%d", ipPart1, ipPart2, ipPart3, ipPart4))<0) {
+        fprintf(stderr,"Number of arguments printed out doenst match\n");
+		return -1;
+	}
+
+    fprintf(stdout,"Podiamos usar um swift esquerdo aqui\n");
+    *port=portPart1*256+portPart2;
+
+    fprintf(stdout,"IP:%s\n",ip);
+    fprintf(stdout,"Port:%d\n",*port);
 
     return 0;
 }
