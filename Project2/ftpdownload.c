@@ -6,7 +6,7 @@ enum STATES{
 
     ST_READ_FTP,
     ST_FAIL,
-    ST_READ_USER,
+    ST_READ_USER_OR_HOST,
     ST_READ_PASSWORD,
     ST_READ_HOST,
     ST_READ_URL_PATH
@@ -22,16 +22,15 @@ typedef int STATE;
 
 
 int parseInput(const char * input,char * user,char * password,char * host,char * path,char * filename);
-int ftp_login(const int socket_control,const char * username,const char *password);
-int ftp_write(const int socket_fd,const char *msg);
-int ftp_read(const int socket_fd,int* code_returned,char * string_returned,const int size_of_string_returned_array);
+struct hostent* DNS_CONVERT_TO_IP(char* DNS);
 
-void buffers_cleaner(char * user,char * password,char * host,char * url_path){
+void buffers_cleaner(char * user,char * password,char * host,char * url_path,char * filename){
 
     memset(user,0,MAX_BUFFER_SIZE);
     memset(password,0,MAX_BUFFER_SIZE);
     memset(host,0,MAX_BUFFER_SIZE);
     memset(url_path,0,MAX_BUFFER_SIZE);
+    memset(filename,0,MAX_BUFFER_SIZE);
 
 }
 
@@ -53,7 +52,6 @@ struct hostent* DNS_CONVERT_TO_IP(char* DNS){
 }
 
 
-
 int main(int argc, char * argv[]){
 
 
@@ -73,11 +71,18 @@ int main(int argc, char * argv[]){
     struct hostent* ip_info_from_dns=NULL;
     struct sockaddr_in control_server_addr;
     struct sockaddr_in data_server_addr;
+    buffers_cleaner(user,password,host,user,filename);
 
     if(parseInput(argv[1],user,password,host,path,filename)!=0){
         fprintf(stderr,"Error in file parsing\n");
         exit(-1);
     }
+
+    fprintf(stdout,"%s\n",user);
+    fprintf(stdout,"%s\n",password);
+    fprintf(stdout,"%s\n",host);
+    fprintf(stdout,"%s\n",path);
+    fprintf(stdout,"%s\n",filename);
 
     //Open both sockets
     if((socket_control=socket(AF_INET,SOCK_STREAM,0))<0){
@@ -142,6 +147,10 @@ int parseInput(const char * input,char * user,char * password,char * host,char *
     const int size_of_input=strlen(input);
     //In the worst case we could store a password and also a path here
     char path_and_filename[2*MAX_BUFFER_SIZE];
+    char user_or_host_str[MAX_BUFFER_SIZE];
+    //Ensure 0 on this aux buffer
+    memset(user_or_host_str,0,MAX_BUFFER_SIZE);
+
     char *pointer_aux=NULL;
     
     STATE current_state=ST_READ_FTP;
@@ -188,13 +197,13 @@ int parseInput(const char * input,char * user,char * password,char * host,char *
                 if(input[i]!='/')
                     current_state=ST_FAIL;
                 else
-                    current_state=ST_READ_USER;
+                    current_state=ST_READ_USER_OR_HOST;
 
             }
 
             break;
   
-        case ST_READ_USER:
+        case ST_READ_USER_OR_HOST:
 
             if(i==size_of_input-1)
                 current_state=ST_FAIL;
@@ -204,18 +213,35 @@ int parseInput(const char * input,char * user,char * password,char * host,char *
                 current_state=ST_FAIL;
 
             if(input[i]==':'){
+                //WAS AN USER
                 current_state=ST_READ_PASSWORD;
+                strncpy(user,user_or_host_str,MAX_BUFFER_SIZE);
                 //Reseta o iterador auxiliar
                 iterator_insert=0;
-            }else{
+            }
+            else if(input[i]=='/'){
+                //WAS AN HOST
+                current_state=ST_READ_URL_PATH;
+                strncpy(host,user_or_host_str,MAX_BUFFER_SIZE);
+                //IN THIS CASE THE USER IS ANNONYMOUS
+                strcpy(user,("anonymous"));
+                //AND PASSWORD IS 0
+                memset(password,0,MAX_BUFFER_SIZE);
+                //Reseta o iterador auxiliar
+                iterator_insert=0;
+
+            }
+            else{
                 //Insere caracter a caracter na string de output
-                user[iterator_insert]=input[i];
+                user_or_host_str[iterator_insert]=input[i];
                 iterator_insert++;
+                
             }
 
-
             break;
+
         
+    
         case ST_READ_PASSWORD:
 
             if(i==size_of_input-1)
@@ -290,8 +316,7 @@ int parseInput(const char * input,char * user,char * password,char * host,char *
 
     //Diferenciate path from password
     // 213.13.65.217
-    // pointer_aux=strrchr(path_and_filename,'/');
-    pointer_aux=path_and_filename;
+    pointer_aux=strrchr(path_and_filename,'/');
     
     //There is no path specified
     if(pointer_aux==NULL){
@@ -305,7 +330,7 @@ int parseInput(const char * input,char * user,char * password,char * host,char *
         pointer_aux--;
         //Place a \0 in the 
         *pointer_aux='\0';
-        strcpy(path,pointer_aux);
+        strcpy(path,path_and_filename);
         fprintf(stdout,"Nao sei se leva o ultimo / ou nao. Pus que nao precisava\n");
 
     }
