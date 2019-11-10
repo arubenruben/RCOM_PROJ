@@ -31,6 +31,9 @@ typedef int STATE;
 
 
 int parseInput(const char * input,char * user,char * password,char * host,char * path,char * filename);
+int ftp_user(const int socket_control,char * username);
+int ftp_write(const int socket_fd,const char *msg);
+int ftp_read(const int socket_fd,int* code_returned,char * string_returned,const int size_of_string_returned_array);
 
 void buffers_cleaner(char * user,char * password,char * host,char * url_path){
 
@@ -118,15 +121,18 @@ int main(int argc, char * argv[]){
         perror("connect control socket()");
 		exit(0);
 	}
-    //Establish connection of data control
-    if(connect(socket_data, (struct sockaddr *)&data_server_addr, sizeof(data_server_addr)) < 0){
-        perror("connect data socket()");
-		exit(0);
-	}	
+
+    if(ftp_user(socket_control,user)<0){
+        fprintf(stderr,"Erro em ftp_user\n");
+        return -1;
+    }
+
     
 
 
-    
+
+
+        
     fprintf(stdout,"Not implemented yet\n");
     return 0;
 }
@@ -296,7 +302,7 @@ int parseInput(const char * input,char * user,char * password,char * host,char *
     //There is no path specified
     if(pointer_aux==NULL){
         path=NULL;
-        strcpy(password,pointer_aux);
+        strcpy(filename,path_and_filename);
     }
     else{
         //++ to skip the /
@@ -317,3 +323,103 @@ int parseInput(const char * input,char * user,char * password,char * host,char *
 
     return 0;
 }
+
+int ftp_user(const int socket_control,char * username){
+
+    if(username==NULL){
+        fprintf(stderr,"Ref invalida em ftp_user\n");
+        return -1;
+    }
+    
+    //this is the command FTP to prepare ther server to receive an authentication
+    char *cmd="USER";
+    int code=-1;
+    char reply[MAX_BUFFER_SIZE];
+    //Ensures 0 values is set
+    memset(reply,0,sizeof(reply));
+
+    int n_bytes_lidos;
+
+    if(ftp_write(socket_control,cmd)<0){
+        perror("Error sending username:");
+        exit(-1);
+    }
+
+    if((n_bytes_lidos=ftp_read(socket_control,&code,reply,sizeof(reply)))<0){
+        fprintf(stderr,"Nada lido no user reply\n");
+        return -1;
+    }
+
+
+    fprintf(stdout,"Not implemented yet\n");
+    return 0;
+}
+
+int ftp_write(const int socket_fd,const char *msg){
+
+    size_t n_bytes=-1;
+
+    if(msg==NULL){
+        fprintf(stderr,"Ref invalida em ftp_write\n");
+        return -1;
+    }
+
+
+    fprintf(stdout,"Sera necessario escrever um |n no fim ?\n");
+
+    if((n_bytes=write(socket_fd,msg,strlen(msg)))<=0){
+        fprintf(stderr,"Error in writing user command\n");
+        return -1;
+    }
+    
+    fprintf(stdout,">Sent:%ld Byte\n",n_bytes);
+    
+
+    return n_bytes;    
+}
+
+
+int ftp_read(const int socket_fd,int* code_returned,char * string_returned,const int size_of_string_returned_array){
+
+    if(string_returned==NULL||code_returned==NULL){
+        fprintf(stderr,"Invalid reference in ftp_Read\n");
+        return -1;
+    }
+    
+    char read_str[2*MAX_BUFFER_SIZE];
+    //Ensure every info on string is 0
+    memset(read_str,0,sizeof(read_str));
+
+    //3digit code + \0
+    char code_str[4];
+    
+    //Ensure everything is a 0 in this array
+    memset(code_str,0,sizeof(code_str));
+    
+    size_t n_bytes_read=-1;
+
+
+    if((n_bytes_read=read(socket_fd,read_str,sizeof(read_str)))<=0){
+        fprintf(stderr,"None was read\n");
+        return -1;
+    }
+    //Copy the first 3 digits of the message
+    strncpy(code_str,read_str,3);
+
+    *code_returned=atoi(code_str);
+    
+    //Cpy the reply text (read_str+3 DISCARD the 3 digit code)
+    strncpy(string_returned,read_str+3,size_of_string_returned_array);
+
+
+    fprintf(stdout,"Read %ld bytes\n",n_bytes_read);
+    fprintf(stdout,"Code %d \n",*code_returned);
+    fprintf(stdout,"Msg %s",string_returned);
+
+    //Parse the code returned
+
+    return n_bytes_read;
+}
+
+
+//int ftp_cwd()
