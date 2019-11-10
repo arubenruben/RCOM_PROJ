@@ -78,12 +78,6 @@ int main(int argc, char * argv[]){
         exit(-1);
     }
 
-    fprintf(stdout,"%s\n",user);
-    fprintf(stdout,"%s\n",password);
-    fprintf(stdout,"%s\n",host);
-    fprintf(stdout,"%s\n",path);
-    fprintf(stdout,"%s\n",filename);
-
     //Open both sockets
     if((socket_control=socket(AF_INET,SOCK_STREAM,0))<0){
         perror("Error opening the control socket:");
@@ -125,7 +119,8 @@ int main(int argc, char * argv[]){
         fprintf(stderr,"Erro a receber resposta de boas vinda do server\n");
         return -1;
     }
-
+    
+  
     if(ftp_login(socket_control,user,password)<0){
         fprintf(stderr,"Erro em ftp_user\n");
         return -1;

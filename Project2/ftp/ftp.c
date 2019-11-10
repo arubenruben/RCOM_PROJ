@@ -1,6 +1,7 @@
 
 
 #include "ftp.h"
+#include <stdlib.h>
 
 
 
@@ -17,15 +18,17 @@ int ftp_user(const int socket_control,const char * username){
     }
     
     //this is the command FTP to prepare ther server to receive an authentication
-    char *cmd="USER";
+    char cmd[2*MAX_BUFFER_SIZE];
     int code=-1;
     char reply[MAX_BUFFER_SIZE];
     //Ensures 0 values is set
     memset(reply,0,sizeof(reply));
 
+    sprintf(cmd,"USER %s\r\n",username);
+
     int n_bytes_lidos;
     
-    //SEND THE USER COMMAND
+    //SEND THE USER COMMAND + USERNAME
     if(ftp_write(socket_control,cmd)<0){
         perror("Error sending username:");
         exit(-1);
@@ -36,22 +39,6 @@ int ftp_user(const int socket_control,const char * username){
         return -1;
     }
 
-    //SEND THE USERNAME INFO
-    if(ftp_write(socket_control,username)<0){
-        perror("Error sending username:");
-        exit(-1);
-    }
-    //READ THE REPLY FROM USERNAME INFORMATION
-    if((n_bytes_lidos=ftp_read(socket_control,&code,reply,sizeof(reply)))<0){
-        fprintf(stderr,"Nada lido no user reply\n");
-        return -1;
-    }
-
-    return 0;
-}
-int ftp_password(const int socket_control,const char *password){
-    
-    fprintf(stdout,"Not implemented yet\n");
     return 0;
 }
 
@@ -113,6 +100,14 @@ int ftp_read(const int socket_fd,int* code_returned,char * string_returned,const
     fprintf(stdout,"Read %ld bytes\n",n_bytes_read);
     fprintf(stdout,"Code %d \n",*code_returned);
     fprintf(stdout,"Msg %s",string_returned);
+    
+    fprintf(stdout,"MULTIPLES LINES NEEDS TO BE FIXED\n");
+
+    FILE *F=fdopen(socket_fd,"r");
+    fflush(F);
+
+
+    
 
     //Parse the code returned
     
@@ -133,10 +128,53 @@ int ftp_read(const int socket_fd,int* code_returned,char * string_returned,const
 
 int ftp_login(const int socket_control,const char * username,const char *password){
 
+    if(username==NULL||password==NULL){
+        fprintf(stderr,"Invalid refs e in FTP_LOGIN\n");
+        return -1;
+    }
 
-    ftp_user(socket_control,username);
+    if(ftp_user(socket_control,username)<0){
+        fprintf(stderr,"Erro no FTP_USER\n");
+        return -1;
+    }
 
-    fprintf(stdout,"Not implemented yet\n");
+    if(ftp_password(socket_control,password)<0){
+        fprintf(stderr,"Erro no FTP_PASSWORD\n");
+        return -1;
+    }
+
+    return 0;
+}
+
+int ftp_password(const int socket_control,const char *password){
+    
+    if(password==NULL){
+        fprintf(stderr,"Ref invalida em ftp_user\n");
+        return -1;
+    }
+    
+    //this is the command FTP to prepare ther server to receive an authentication
+    char cmd[2*MAX_BUFFER_SIZE];
+    int code=-1;
+    char reply[MAX_BUFFER_SIZE];
+    //Ensures 0 values is set
+    memset(reply,0,sizeof(reply));
+    
+    //Constructs the formated string
+    sprintf(cmd,"PASS %s\r\n",password);
+
+    int n_bytes_lidos;
+    
+    //SEND THE USER COMMAND + password
+    if(ftp_write(socket_control,cmd)<0){
+        perror("Error sending password:");
+        exit(-1);
+    }
+    //READ THE REPLY TO USER COMMAND
+    if((n_bytes_lidos=ftp_read(socket_control,&code,reply,sizeof(reply)))<0){
+        fprintf(stderr,"Nada lido no user reply\n");
+        return -1;
+    }
 
     return 0;
 }
