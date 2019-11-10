@@ -28,6 +28,7 @@ struct hostent {
 
 #define h_addr h_addr_list[0]	The first address in h_addr_list. 
 */
+
         if ((h=gethostbyname(argv[1])) == NULL) {  
             herror("gethostbyname");
             exit(1);

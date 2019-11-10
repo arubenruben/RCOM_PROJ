@@ -26,6 +26,8 @@ enum STATES{
 
 typedef int STATE;
 
+// Tests
+// ftp.up.pt/pub/apache/activemq/activemq-artemis-native/1.0.0/activemq-artemis-native-1.0.0-source-release.tar.gz
 
 //Sets the maximum value the output of buffer can contain
 
@@ -296,8 +298,9 @@ int parseInput(const char * input,char * user,char * password,char * host,char *
     }
 
     //Diferenciate path from password
-
-    pointer_aux=strrchr(path_and_filename,'/');
+    // 213.13.65.217
+    // pointer_aux=strrchr(path_and_filename,'/');
+    pointer_aux=path_and_filename;
     
     //There is no path specified
     if(pointer_aux==NULL){
@@ -311,7 +314,7 @@ int parseInput(const char * input,char * user,char * password,char * host,char *
         pointer_aux--;
         //Place a \0 in the 
         *pointer_aux='\0';
-        strcpy(path,path_and_filename);
+        strcpy(path,pointer_aux);
         fprintf(stdout,"Nao sei se leva o ultimo / ou nao. Pus que nao precisava\n");
 
     }
