@@ -300,4 +300,37 @@ int ftp_cwd(const int control_socket_fd, const char *path) {
     
     return 0;
 }
+int ftp_disc(const int control_socket_fd,const int data_socket_fd){
+
+
+    if(close(data_socket_fd)<0){
+        perror("Error closing data socket:");
+        return -1;
+    }
+    int code_returned=-1;
+    char* command="QUIT\n";
+    char msg_str[MAX_BUFFER_SIZE];
+    
+    //Cleans the buffer
+    memset(msg_str,0,sizeof(msg_str));
+
+    //Send the Disc Message
+    if(ftp_write(control_socket_fd,command)<0){
+        fprintf(stderr,"Error sending the QUIT MESSAGE\n");
+    }
+
+    //Reads the reply
+    if(ftp_read(control_socket_fd,&code_returned,msg_str,sizeof(msg_str))<0){
+        fprintf(stderr,"Error reading the QUIT message\n");
+        return -1;
+    }
+
+    if(close(control_socket_fd)<0){
+        perror("Error closing the control_socket:");
+        return -1;
+    }
+
+    fprintf(stdout,"Task Completed. Goodbye\n");
+    return 0;
+}
 

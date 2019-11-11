@@ -66,3 +66,12 @@ int ftp_passive_mode(const int socket_control,char *ip,int* port);
 * @return {...} ...
 */
 int ftp_login(const int socket_control, const char *username, const char *password);
+/**
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+*/
+int ftp_disc(const int control_socket_fd,const int data_socket_fd);
