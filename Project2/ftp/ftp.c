@@ -217,7 +217,6 @@ int ftp_passive_mode(const int socket_control,char *ip,int* port){
     return 0;
 }
 
-
 //DELETE RETURN CODE FROM FTP_rEAD ?-----------------------------------------------
 int ftp_retr(const int control_socket_fd, const char *filename) {
     
@@ -251,7 +250,6 @@ int ftp_retr(const int control_socket_fd, const char *filename) {
 }
 
 int ftp_cwd(const int control_socket_fd, const char *path) {
-   
     
     //  Checks control_socket_fd parameter
     if(control_socket_fd < 0) {
@@ -264,19 +262,31 @@ int ftp_cwd(const int control_socket_fd, const char *path) {
         fprintf(stderr,"Invalid filename in ftp_retr\n");
         return -1;
     }
+    int return_code=-1;
+    char str_msg[2*MAX_BUFFER_SIZE];
+    char command[2*MAX_BUFFER_SIZE];
+    
+    //Ensure both buffers are cleaned
+    memset(command,0,sizeof(command));
+    memset(str_msg,0,sizeof(str_msg));
+    
+    //Format the command CWD with CWD PATH
+    sprintf(command,"CWD %s\n",path);
 
     //  Writes the path to the socket
-    if(!(ftp_write(control_socket_fd, path) > 0)) {
+    if(!(ftp_write(control_socket_fd, command) > 0)) {
         fprintf(stderr,"Error in writing the path to cwd in ftp_retr\n");
         return -1;
     }
-    /*
-    //  Retrieves information from the socket
-    if(!(ftp_read(control_socket_fd,  &return_code, path, strlen(path)) > 0)) {
+    
+    //Retrieves information from the socket
+    if(ftp_read(control_socket_fd,  &return_code, str_msg, sizeof(str_msg))< 0) {
         fprintf(stderr,"Error in sending path to change directory in ftp_retr\n");
         return -1;
     }
-    */
+    
+    fprintf(stdout,"The Server is oriented to the correct path\n");
+    
     return 0;
 }
 
