@@ -221,7 +221,7 @@ int ftp_passive_mode(const int socket_control,char *ip,int* port){
 int ftp_retr(const int control_socket_fd, const char *filename) {
     
     
-    //  Checks control_socket_fd parameter
+     //  Checks control_socket_fd parameter
     if(control_socket_fd < 0) {
         fprintf(stderr,"Invalid file descriptor for control socket in ftp_retr\n");
         return -1;
@@ -232,20 +232,31 @@ int ftp_retr(const int control_socket_fd, const char *filename) {
         fprintf(stderr,"Invalid filename in ftp_retr\n");
         return -1;
     }
+    int return_code=-1;
+    char str_msg[2*MAX_BUFFER_SIZE];
+    char command[2*MAX_BUFFER_SIZE];
+    
+    //Ensure both buffers are cleaned
+    memset(command,0,sizeof(command));
+    memset(str_msg,0,sizeof(str_msg));
+    
+    //Format the command CWD with CWD filename
+    sprintf(command,"RETR %s\n",filename);
 
     //  Writes the filename to the socket
-    if(!(ftp_write(control_socket_fd, filename) > 0)) {
-        fprintf(stderr,"Error in writing the filename in ftp_retr\n");
+    if(!(ftp_write(control_socket_fd, command) > 0)) {
+        fprintf(stderr,"Error in writing the filename to cwd in ftp_retr\n");
         return -1;
     }
-
-    /*
-    //  Retrieves information from the socket
-    if(!(ftp_read(control_socket_fd,  &return_code, filename, strlen(filename)) > 0)) {
-        fprintf(stderr,"Error in retrieving the filename in ftp_retr\n");
+    
+    //Retrieves information from the socket
+    if(ftp_read(control_socket_fd,  &return_code, str_msg, sizeof(str_msg))< 0) {
+        fprintf(stderr,"Error in sending filename to change directory in ftp_retr\n");
         return -1;
     }
-    */
+    
+    fprintf(stdout,"The Server is ready to retrievie file\n");
+    
     return 0;
 }
 
