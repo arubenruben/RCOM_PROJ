@@ -98,8 +98,11 @@ int ftp_read(const int socket_fd,int* code_returned,char * string_returned,const
         fprintf(stderr,"Invalid reference in ftp_Read\n");
         return -1;
     }
+
+    FILE *FP=fdopen(socket_fd,"r");
     
     char read_str[2*MAX_BUFFER_SIZE];
+    
     //Ensure every info on string is 0
     memset(read_str,0,sizeof(read_str));
 
@@ -109,23 +112,23 @@ int ftp_read(const int socket_fd,int* code_returned,char * string_returned,const
     //Ensure everything is a 0 in this array
     memset(code_str,0,sizeof(code_str));
     
-    size_t n_bytes_read=-1;
+    do{
+        memset(read_str, 0, sizeof(read_str));
+		fgets(read_str, sizeof(read_str), FP);
+
+    }while (!('1' <= read_str[0] && read_str[0] <= '5') || read_str[3] != ' ');
 
 
-    if((n_bytes_read=read(socket_fd,read_str,sizeof(read_str)))<=0){
-        perror("None was read:");
-        return -1;
-    }
+   
     //Copy the first 3 digits of the message
     strncpy(code_str,read_str,3);
 
     *code_returned=atoi(code_str);
     
+
     //Cpy the reply text (read_str+3 DISCARD the 3 digit code)
     strncpy(string_returned,read_str,size_of_string_returned_array);
 
-
-    fprintf(stdout,"Read %ld bytes\n",n_bytes_read);
     fprintf(stdout,"Code %d \n",*code_returned);
     fprintf(stdout,"Msg %s\n",string_returned);
     
@@ -138,7 +141,7 @@ int ftp_read(const int socket_fd,int* code_returned,char * string_returned,const
         return -1;
     }
     else if(*code_returned<400){
-        return n_bytes_read;
+        return 0;
     }
     else{
         fprintf(stderr,"ELSE EXIT\n");
