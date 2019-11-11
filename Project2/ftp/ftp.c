@@ -214,3 +214,66 @@ int ftp_passive_mode(const int socket_control,char *ip,int* port){
     return 0;
 }
 
+
+//DELETE RETURN CODE FROM FTP_rEAD ?-----------------------------------------------
+int ftp_retr(const int control_socket_fd, const char *filename) {
+    
+    
+    //  Checks control_socket_fd parameter
+    if(control_socket_fd < 0) {
+        fprintf(stderr,"Invalid file descriptor for control socket in ftp_retr\n");
+        return -1;
+    }
+
+    //  Checks filename parameter
+    if(filename == NULL) {
+        fprintf(stderr,"Invalid filename in ftp_retr\n");
+        return -1;
+    }
+
+    //  Writes the filename to the socket
+    if(!(ftp_write(control_socket_fd, filename) > 0)) {
+        fprintf(stderr,"Error in writing the filename in ftp_retr\n");
+        return -1;
+    }
+
+    /*
+    //  Retrieves information from the socket
+    if(!(ftp_read(control_socket_fd,  &return_code, filename, strlen(filename)) > 0)) {
+        fprintf(stderr,"Error in retrieving the filename in ftp_retr\n");
+        return -1;
+    }
+    */
+    return 0;
+}
+
+int ftp_cwd(const int control_socket_fd, const char *path) {
+   
+    
+    //  Checks control_socket_fd parameter
+    if(control_socket_fd < 0) {
+        fprintf(stderr,"Invalid file descriptor for control socket in ftp_retr\n");
+        return -1;
+    }
+
+    //  Checks path parameter
+    if(path == NULL) {
+        fprintf(stderr,"Invalid filename in ftp_retr\n");
+        return -1;
+    }
+
+    //  Writes the path to the socket
+    if(!(ftp_write(control_socket_fd, path) > 0)) {
+        fprintf(stderr,"Error in writing the path to cwd in ftp_retr\n");
+        return -1;
+    }
+    /*
+    //  Retrieves information from the socket
+    if(!(ftp_read(control_socket_fd,  &return_code, path, strlen(path)) > 0)) {
+        fprintf(stderr,"Error in sending path to change directory in ftp_retr\n");
+        return -1;
+    }
+    */
+    return 0;
+}
+
