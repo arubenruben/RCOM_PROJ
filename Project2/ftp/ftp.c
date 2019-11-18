@@ -98,8 +98,11 @@ int ftp_read(const int socket_fd,int* code_returned,char * string_returned,const
         fprintf(stderr,"Invalid reference in ftp_Read\n");
         return -1;
     }
+
+    FILE *FP=fdopen(socket_fd,"r");
     
     char read_str[2*MAX_BUFFER_SIZE];
+    
     //Ensure every info on string is 0
     memset(read_str,0,sizeof(read_str));
 
@@ -109,23 +112,23 @@ int ftp_read(const int socket_fd,int* code_returned,char * string_returned,const
     //Ensure everything is a 0 in this array
     memset(code_str,0,sizeof(code_str));
     
-    size_t n_bytes_read=-1;
+    do{
+        memset(read_str, 0, sizeof(read_str));
+		fgets(read_str, sizeof(read_str), FP);
+
+    }while (!('1' <= read_str[0] && read_str[0] <= '5') || read_str[3] != ' ');
 
 
-    if((n_bytes_read=read(socket_fd,read_str,sizeof(read_str)))<=0){
-        perror("None was read:");
-        return -1;
-    }
+   
     //Copy the first 3 digits of the message
     strncpy(code_str,read_str,3);
 
     *code_returned=atoi(code_str);
     
+
     //Cpy the reply text (read_str+3 DISCARD the 3 digit code)
     strncpy(string_returned,read_str,size_of_string_returned_array);
 
-
-    fprintf(stdout,"Read %ld bytes\n",n_bytes_read);
     fprintf(stdout,"Code %d \n",*code_returned);
     fprintf(stdout,"Msg %s\n",string_returned);
     
@@ -138,7 +141,7 @@ int ftp_read(const int socket_fd,int* code_returned,char * string_returned,const
         return -1;
     }
     else if(*code_returned<400){
-        return n_bytes_read;
+        return 0;
     }
     else{
         fprintf(stderr,"ELSE EXIT\n");
@@ -211,6 +214,123 @@ int ftp_passive_mode(const int socket_control,char *ip,int* port){
     fprintf(stdout,"IP:%s\n",ip);
     fprintf(stdout,"Port:%d\n",*port);
 
+    return 0;
+}
+
+//DELETE RETURN CODE FROM FTP_rEAD ?-----------------------------------------------
+int ftp_retr(const int control_socket_fd, const char *filename) {
+    
+    
+     //  Checks control_socket_fd parameter
+    if(control_socket_fd < 0) {
+        fprintf(stderr,"Invalid file descriptor for control socket in ftp_retr\n");
+        return -1;
+    }
+
+    //  Checks filename parameter
+    if(filename == NULL) {
+        fprintf(stderr,"Invalid filename in ftp_retr\n");
+        return -1;
+    }
+    int return_code=-1;
+    char str_msg[2*MAX_BUFFER_SIZE];
+    char command[2*MAX_BUFFER_SIZE];
+    
+    //Ensure both buffers are cleaned
+    memset(command,0,sizeof(command));
+    memset(str_msg,0,sizeof(str_msg));
+    
+    //Format the command CWD with CWD filename
+    sprintf(command,"RETR %s\n",filename);
+
+    //  Writes the filename to the socket
+    if(!(ftp_write(control_socket_fd, command) > 0)) {
+        fprintf(stderr,"Error in writing the filename to cwd in ftp_retr\n");
+        return -1;
+    }
+    
+    //Retrieves information from the socket
+    if(ftp_read(control_socket_fd,  &return_code, str_msg, sizeof(str_msg))< 0) {
+        fprintf(stderr,"Error in sending filename to change directory in ftp_retr\n");
+        return -1;
+    }
+    
+    fprintf(stdout,"The Server is ready to retrievie file\n");
+    
+    return 0;
+}
+
+int ftp_cwd(const int control_socket_fd, const char *path) {
+    
+    //  Checks control_socket_fd parameter
+    if(control_socket_fd < 0) {
+        fprintf(stderr,"Invalid file descriptor for control socket in ftp_retr\n");
+        return -1;
+    }
+
+    //  Checks path parameter
+    if(path == NULL) {
+        fprintf(stderr,"Invalid filename in ftp_retr\n");
+        return -1;
+    }
+    int return_code=-1;
+    char str_msg[2*MAX_BUFFER_SIZE];
+    char command[2*MAX_BUFFER_SIZE];
+    
+    //Ensure both buffers are cleaned
+    memset(command,0,sizeof(command));
+    memset(str_msg,0,sizeof(str_msg));
+    
+    //Format the command CWD with CWD PATH
+    sprintf(command,"CWD %s\n",path);
+
+    //  Writes the path to the socket
+    if(!(ftp_write(control_socket_fd, command) > 0)) {
+        fprintf(stderr,"Error in writing the path to cwd in ftp_retr\n");
+        return -1;
+    }
+    
+    //Retrieves information from the socket
+    if(ftp_read(control_socket_fd,  &return_code, str_msg, sizeof(str_msg))< 0) {
+        fprintf(stderr,"Error in sending path to change directory in ftp_retr\n");
+        return -1;
+    }
+    
+    fprintf(stdout,"The Server is oriented to the correct path\n");
+    
+    return 0;
+}
+int ftp_disc(const int control_socket_fd,const int data_socket_fd){
+
+
+    if(close(data_socket_fd)<0){
+        perror("Error closing data socket:");
+        return -1;
+    }
+    int code_returned=-1;
+    char* command="QUIT\n";
+    char msg_str[MAX_BUFFER_SIZE];
+    
+    //Cleans the buffer
+    memset(msg_str,0,sizeof(msg_str));
+
+    //Send the Disc Message
+    if(ftp_write(control_socket_fd,command)<0){
+        fprintf(stderr,"Error sending the QUIT MESSAGE\n");
+    }
+
+    //Reads the reply
+    if(ftp_read(control_socket_fd,&code_returned,msg_str,sizeof(msg_str))<0){
+        fprintf(stderr,"Error reading the QUIT message\n");
+        return -1;
+    }
+
+    if(close(control_socket_fd)<0){
+        perror("Error closing the control_socket:");
+        return -1;
+    }
+
+    fprintf(stdout,"Task Completed. Goodbye\n");
     return 0;
 }
 
