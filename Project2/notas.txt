@@ -18,7 +18,7 @@ Maquina 4:
     MAC:00:22:64:a6:a4:f1
 
 
-flash doc: expN_253 N={2,3,4,..}
+flash doc: expN_253 N={2,3,4,5,..} 
 
 
 arp: protocolo implementado na pilha TCP IP que tem como funcao ao receber da camada superior um IP ser capaz na rede de fazer uma pergunta usando um broadcast para saber atraves da resposta que espera receber de uma maquina qual o MAC Address da maquina nessa rede
